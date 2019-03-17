@@ -1,6 +1,6 @@
 {
   "name": "ts-rust-bridge-codegen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A toolset to build efficient communication between rust and typescript",
   "license": "MIT",
   "repository": {
