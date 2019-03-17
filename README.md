@@ -81,3 +81,7 @@ Now you can serialize them as JSON.
 Note: bincode support is incoming.
 
 Look at `examples` dir for more details.
+
+## License
+
+MIT
