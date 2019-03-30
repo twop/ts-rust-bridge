@@ -6,7 +6,8 @@ import {
   EntryType,
   TypeTag,
   Variant,
-  VariantT
+  VariantT,
+  getVariantName
 } from '../schema';
 
 import { TsFileBlockT, TsFileBlock as ts, D } from './ast';
@@ -65,7 +66,7 @@ const unionToTaggedUnion = (name: string, variants: VariantT[]): TsFileBlockT =>
     tagField: 'tag',
     valueField: 'value',
     variants: variants.map(v => ({
-      tag: variantName(v),
+      tag: getVariantName(v),
       valueType: variantPayload(name, v)
     }))
   });
@@ -73,7 +74,7 @@ const unionToTaggedUnion = (name: string, variants: VariantT[]): TsFileBlockT =>
 const newtypeToTypeAlias = (name: string, type: Type): TsFileBlockT =>
   ts.Alias({
     name,
-    toType: newtypeToStr(type, name)
+    toType: newtypeToTypeStr(type, name)
   });
 
 const newtypeToConstructor = (name: string, type: Type): TsFileBlockT =>
@@ -86,7 +87,7 @@ const newtypeToConstructor = (name: string, type: Type): TsFileBlockT =>
       }
     ],
     body: `(val as any)`,
-    returnType: newtypeToStr(type, name)
+    returnType: newtypeToTypeStr(type, name)
   });
 
 const unionToPayloadInterfaces = (
@@ -109,7 +110,7 @@ const unionToConstructors = (
 ): TsFileBlockT[] =>
   variants.map(v => {
     const params = variantToCtorParameters(unionName, v);
-    const name = variantName(v);
+    const name = getVariantName(v);
     return params.length > 0
       ? ts.ArrowFunc({
           name,
@@ -206,7 +207,7 @@ const scalarToString = (scalar: Scalar): string => {
   }
 };
 
-const typeToString = (type: Type): string => {
+export const typeToString = (type: Type): string => {
   switch (type.tag) {
     case TypeTag.Option:
       return `(${typeToString(type.value)}) | undefined`;
@@ -219,12 +220,5 @@ const typeToString = (type: Type): string => {
   }
 };
 
-const variantName = Variant.match({
-  Struct: s => s,
-  Unit: s => s,
-  Tuple: s => s,
-  NewType: s => s
-});
-
-const newtypeToStr = (type: Type, name: string): string =>
+const newtypeToTypeStr = (type: Type, name: string): string =>
   `${typeToString(type)} & { type: '${name}'}`;

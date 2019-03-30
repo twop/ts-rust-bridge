@@ -14,16 +14,9 @@ pub enum Message {
 
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct Newtype(pub u32);
-
-
-pub type NewtypeAlias = Newtype;
-
-
-#[derive(Deserialize, Debug, Clone)]
 pub struct NormalStruct {
     pub a: f32,
-    pub msg: Message,
+    pub tuple: Tuple,
 }
 
 
@@ -37,4 +30,7 @@ pub enum Enum {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Tuple(pub Option<bool>, pub Vec<String>);
+
+
+pub type Aha = Vec<Option<Vec<String>>>;
 

@@ -25,9 +25,17 @@ export module Message {
   });
 }
 
+export type Newtype = number & { type: 'Newtype' };
+
+export module Newtype {
+  export const mk = (val: number): number & { type: 'Newtype' } => val as any;
+}
+
+export type NewtypeAlias = boolean;
+
 export interface NormalStruct {
   a: number;
-  tuple: Tuple;
+  msg: Message;
 }
 
 export enum Enum {
@@ -48,5 +56,3 @@ export module Tuple {
     p1
   ];
 }
-
-export type Aha = Array<(Array<string>) | undefined>;
