@@ -11,7 +11,7 @@ import {
 
 import { TsFileBlockT, TsFileBlock as ts } from './ast';
 import { Union, of } from 'ts-union';
-import { typeToString, variantName } from './schema2ast';
+import { typeToString, variantStructName } from './schema2ast';
 // import { typeToString } from './schema2ast';
 
 enum Ser {
@@ -149,10 +149,11 @@ const entry2SerBlocks = EntryType.match({
   Union: (name, variants) => ({
     requiredImports: [fromTypesDeclaration(name), fromLibrary(Ser.Scalar)],
     blocks: [
-      genEnumIndexMapping(name, variants.map(variantName)),
-      ts.ConstVar({
-        name: `${name}Serializers`,
-        expression: genUnionSerializers(name, variants)
+      genEnumIndexMapping(name, variants.map(getVariantName)),
+      ts.ArrowFunc({
+        name: serFuncName(name),
+        body: genUnionSerializers(name, variants, 'sink'),
+        params: [{name:'sink', type: Types.Sink}, {name: 'val', type: name}]
       })
       // genEnumSerialization(name)
     ],
@@ -250,16 +251,16 @@ const genUnionSerializers = (
   )}[val.tag])
   
   ${variants.map(
-    v => `
-  if (val.tag === "${getVariantName(v)}") {
-    return ${Variant.match({
-      Unit: name => `${name}: (${sinkArg}: ${Types.Sink}) => ${sinkArg}`,
-      Struct: name => `${name}: (${sinkArg}: ${Types.Sink}) => ${sinkArg}`,
-      default: () => ''
+    v => `if (val.tag === "${getVariantName(v)}") {
+    return ${Variant.match(v, {
+      Unit: () => `s`,
+      Struct: name => `${serFuncName(variantStructName(unionName,name))}(s, val.value)`,
+      NewType: (_, type) => `${serializerNameFor(type)}(s, val.value)`,
+      Tuple: name => `${serFuncName(variantStructName(unionName,name))}(s, val.value)`,
+      default: () => 's'
     })}
-  }
-  `
-  )}
+  }`
+  ).join('\n')}
  }`;
 
 // const genAliasSerialization = (aliasName: string, type: Type): TsFileBlockT[] =>

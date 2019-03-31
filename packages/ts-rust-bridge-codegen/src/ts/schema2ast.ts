@@ -67,7 +67,7 @@ const unionToTaggedUnion = (name: string, variants: VariantT[]): TsFileBlockT =>
     valueField: 'value',
     variants: variants.map(v => ({
       tag: getVariantName(v),
-      valueType: variantPayload(name, v)
+      valueType: variantPayloadType(name, v)
     }))
   });
 
@@ -98,7 +98,9 @@ const unionToPayloadInterfaces = (
     (interfaces, v) =>
       Variant.match(v, {
         Struct: (structName, members) =>
-          interfaces.concat(structToInterface(unionName + structName, members)),
+          interfaces.concat(structToInterface(variantStructName(unionName, structName), members)),
+        Tuple: (tupleName, types) =>
+          interfaces.concat(structToInterface(variantStructName(unionName, structName), members)),
         default: () => interfaces
       }),
     [] as TsFileBlockT[]
@@ -128,7 +130,7 @@ const unionToConstructors = (
 const variantToCtorParameters = (unionName: string, v: VariantT): D.Field[] =>
   Variant.match(v, {
     Struct: name => [
-      { name: 'value', type: structVariantInterfaceName(unionName, name) }
+      { name: 'value', type: variantInterfaceName(unionName, name) }
     ],
     Unit: () => [],
     NewType: (_, type) => [{ name: 'value', type: typeToString(type) }],
@@ -144,15 +146,15 @@ const variantToCtorBody = Variant.match({
     `{ tag: "${name}", value: [${fields.map((_, i) => `p${i}`)}]}`
 });
 
-const variantPayload = (unionName: string, v: VariantT): string | undefined =>
+const variantPayloadType = (unionName: string, v: VariantT): string | undefined =>
   Variant.match(v, {
-    Struct: name => structVariantInterfaceName(unionName, name),
+    Struct: name => variantInterfaceName(unionName, name),
     Unit: () => undefined,
     NewType: (_, type) => typeToString(type),
     Tuple: (_, fields) => `[${fields.map(typeToString).join(', ')}]`
   });
 
-const structVariantInterfaceName = (unionName: string, variantName: string) =>
+const variantInterfaceName = (unionName: string, variantName: string) =>
   `${unionName + variantName}`;
 
 const structToInterface = (
@@ -222,3 +224,6 @@ export const typeToString = (type: Type): string => {
 
 const newtypeToTypeStr = (type: Type, name: string): string =>
   `${typeToString(type)} & { type: '${name}'}`;
+
+export const variantStructName = (unionName: string, structName: string): string => unionName + structName;
+

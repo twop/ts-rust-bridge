@@ -5,7 +5,7 @@ import {
   entries2SerBlocks
 } from '../src/index';
 import { exampleEntries } from './basic.ast';
-import { format } from 'prettier';
+// import { format } from 'prettier';
 import * as fs from 'fs';
 
 const tsFile = __dirname + '/basic.gen.ts';
@@ -30,15 +30,16 @@ ${ast2ts(
 ).join('\n\n')}
 `;
 
-const prettierOptions = JSON.parse(
-  fs.readFileSync(__dirname + '/../.prettierrc').toString()
-);
+// const prettierOptions = JSON.parse(
+//   fs.readFileSync(__dirname + '/../.prettierrc').toString()
+// );
 
-const pretty = (content: string) =>
-  format(content, {
-    ...prettierOptions,
-    parser: 'typescript'
-  });
+// const pretty = (content: string) =>
+//   format(content, {
+//     ...prettierOptions,
+//     parser: 'typescript'
+//   });
+const pretty = (content: string) => content;
 
 fs.writeFileSync(testRustFile, rustContent);
 fs.writeFileSync(tsFile, pretty(tsContent));

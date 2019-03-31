@@ -31,6 +31,23 @@ export const MessageMap: { [key: string]: number } = {
   VStruct: 3
 };
 
+export const serializeMessage = (sink: Sink, val: Message) => {
+  const s = write_scalar.U32(sink, MessageMap[val.tag]);
+
+  if (val.tag === 'Unit') {
+    return s;
+  }
+  if (val.tag === 'One') {
+    return write_scalar.F32(s, val.value);
+  }
+  if (val.tag === 'Two') {
+    return serializeMessageTwo(s, val.value);
+  }
+  if (val.tag === 'VStruct') {
+    return serializeMessageVStruct(s, val.value);
+  }
+};
+
 export const serializeNormalStruct = (
   sink: Sink,
   { a, tuple }: NormalStruct
