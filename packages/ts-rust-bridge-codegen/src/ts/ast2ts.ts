@@ -57,7 +57,7 @@ const genArrowFunc = ({
   body,
   dontExport
 }: D.ArrowFunc): FileBlock =>
-  `${dontExport ? '' : 'export '} const ${name} = (${params
+  `${dontExport ? '' : 'export '}const ${name} = (${params
     .map(({ name: n, type }) => `${n}: ${type}`)
     .join(', ')})${returnType ? `: ${returnType}` : ''} => ${
     wrappedInBraces
@@ -87,8 +87,15 @@ ${variants
 const genAlias = ({ name, toType }: D.Alias): FileBlock =>
   `export type ${name} = ${toType}`;
 
-const genConstVariable = ({ name, type, expression }: D.ConstVar): FileBlock =>
-  `export const ${name}${type ? `: ${type}` : ''} = ${expression};`;
+const genConstVariable = ({
+  name,
+  type,
+  expression,
+  dontExport
+}: D.ConstVar): FileBlock =>
+  `${dontExport ? '' : 'export '}const ${name}${
+    type ? `: ${type}` : ''
+  } = ${expression};`;
 
 const genImport = ({ names, from }: D.Import): FileBlock =>
   `import { ${names.join(', ')} } from "${from}";`;

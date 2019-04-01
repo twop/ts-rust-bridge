@@ -6,26 +6,34 @@ import {
   TypeTag,
   VariantT,
   Variant,
-  getVariantName
+  getVariantName,
+  StructMembers
 } from '../schema';
 
 import { TsFileBlockT, TsFileBlock as ts } from './ast';
 import { Union, of } from 'ts-union';
-import { typeToString, variantStructName } from './schema2ast';
+import { typeToString, variantPayloadTypeName } from './schema2ast';
 // import { typeToString } from './schema2ast';
 
-enum Ser {
+enum Write {
   // sink: Sink,
   // val: T | undefined,
   // serEl: SerFunc<T>
   Opt = 'write_opt',
 
   // sink: Sink, seq: T[], serEl: SerFunc<T>
-  Seq = 'write_seq',
-
-  // f.32
-  Scalar = 'write_scalar'
+  Seq = 'write_seq'
 }
+
+const WriteScalar: { [K in Scalar]: string } = {
+  [Scalar.Bool]: 'write_bool',
+  [Scalar.Str]: 'write_str',
+  [Scalar.F32]: 'write_f32',
+  [Scalar.U8]: 'write_u8',
+  [Scalar.U16]: 'write_u16',
+  [Scalar.U32]: 'write_u32',
+  [Scalar.USIZE]: 'write_u64'
+};
 
 const enum Types {
   Sink = 'Sink',
@@ -34,7 +42,7 @@ const enum Types {
 
 const serializerType = (typeStr: string) => `${Types.SerFunc}<${typeStr}>`;
 const enumMappingName = (enumName: string) => `${enumName}Map`;
-const serFuncName = (typeName: string) => `serialize${typeName}`;
+const serFuncName = (typeName: string) => `write${typeName}`;
 
 const serializerChainName = (types: Type[]): string => {
   if (types.length === 1) {
@@ -42,7 +50,7 @@ const serializerChainName = (types: Type[]): string => {
 
     switch (type.tag) {
       case TypeTag.Scalar:
-        return `${Ser.Scalar}.${type.value}`;
+        return WriteScalar[type.value];
 
       case TypeTag.RefTo:
         return `${serFuncName(type.value)}`;
@@ -79,12 +87,30 @@ type SerPiece = {
 
 const entry2SerBlocks = EntryType.match({
   Enum: (name, { variants }): SerPiece => ({
-    requiredImports: [fromTypesDeclaration(name), fromLibrary(Ser.Scalar)],
-    blocks: [genEnumIndexMapping(name, variants), genEnumSerialization(name)],
+    requiredImports: [
+      fromTypesDeclaration(name),
+      fromLibrary(WriteScalar[Scalar.U32])
+    ],
+    blocks: [genEnumIndexMapping(name, variants), generateEnumSerializer(name)],
     typeSerializers: []
   }),
 
   Alias: (name, type): SerPiece => ({
+    requiredImports: [
+      fromTypesDeclaration(name),
+      ...collectRequiredImports(type)
+    ],
+    typeSerializers: generateTypesSerializers(type),
+    blocks: [
+      ts.ConstVar({
+        name: serFuncName(name),
+        type: serializerType(name),
+        expression: serializerNameFor(type)
+      })
+    ]
+  }),
+
+  Newtype: (name, type): SerPiece => ({
     requiredImports: [
       fromTypesDeclaration(name),
       ...collectRequiredImports(type)
@@ -104,60 +130,93 @@ const entry2SerBlocks = EntryType.match({
       fromTypesDeclaration(name),
       ...flatMap(types, collectRequiredImports)
     ],
-    blocks: [
-      ts.ArrowFunc({
-        name: serFuncName(name),
-        returnType: Types.Sink,
-        body: composeTypeSerializers(
-          types.map((type, i) => ({ type, name: `val[${i}]` })),
-          'sink'
-        ),
-        params: [
-          { name: 'sink', type: Types.Sink },
-          { name: 'val', type: name }
-        ]
-      })
-    ],
+    blocks: [generateTupleSerializer(name, types, true)],
     typeSerializers: flatMap(types, generateTypesSerializers)
   }),
 
   Struct: (name, members): SerPiece => {
-    const fields = Object.keys(members).map(name => ({
-      name,
-      type: members[name]
-    }));
+    const fields = enumerateStructFields(members);
 
     return {
       requiredImports: [
         fromTypesDeclaration(name),
         ...flatMap(fields, f => collectRequiredImports(f.type))
       ],
-      blocks: [
-        ts.ArrowFunc({
-          name: serFuncName(name),
-          returnType: Types.Sink,
-          body: composeTypeSerializers(fields, 'sink'),
-          params: [
-            { name: 'sink', type: Types.Sink },
-            { name: `{${fields.map(f => f.name).join(', ')}}`, type: name }
-          ]
-        })
-      ],
+      blocks: [generateStructSerializer(name, fields, true)],
       typeSerializers: flatMap(fields, f => generateTypesSerializers(f.type))
     };
   },
-  Union: (name, variants) => ({
-    requiredImports: [fromTypesDeclaration(name), fromLibrary(Ser.Scalar)],
-    blocks: [
-      genEnumIndexMapping(name, variants.map(getVariantName)),
-      ts.ArrowFunc({
-        name: serFuncName(name),
-        body: genUnionSerializers(name, variants, 'sink'),
-        params: [{name:'sink', type: Types.Sink}, {name: 'val', type: name}]
-      })
-      // genEnumSerialization(name)
+
+  Union: (unionName, variants): SerPiece => ({
+    requiredImports: [
+      fromTypesDeclaration(unionName),
+      fromLibrary(WriteScalar[Scalar.U32]),
+      ...flatMap(
+        variants,
+        Variant.match({
+          Unit: () => [] as typeof Import.T[],
+          NewType: (_, type) => collectRequiredImports(type),
+          Struct: (variantName, members) =>
+            flatMap(enumerateStructFields(members), m =>
+              collectRequiredImports(m.type)
+            ).concat(
+              fromTypesDeclaration(
+                variantPayloadTypeName(unionName, variantName)
+              )
+            ),
+          Tuple: (variantName, types) =>
+            flatMap(types, collectRequiredImports).concat(
+              fromTypesDeclaration(
+                variantPayloadTypeName(unionName, variantName)
+              )
+            )
+        })
+      )
     ],
-    typeSerializers: []
+    blocks: [
+      genEnumIndexMapping(unionName, variants.map(getVariantName)),
+      ts.ArrowFunc({
+        name: serFuncName(unionName),
+        body: genUnionSerializers(unionName, variants, 'sink'),
+        returnType: Types.Sink,
+        params: [
+          { name: 'sink', type: Types.Sink },
+          { name: 'val', type: unionName }
+        ]
+      }),
+      ...flatMap(
+        variants,
+        Variant.match({
+          Tuple: (variantName, types) => [
+            generateTupleSerializer(
+              variantPayloadTypeName(unionName, variantName),
+              types,
+              false
+            )
+          ],
+          Struct: (variantName, members) => [
+            generateStructSerializer(
+              variantPayloadTypeName(unionName, variantName),
+              enumerateStructFields(members),
+              false
+            )
+          ],
+          default: () => [] as TsFileBlockT[]
+        })
+      )
+    ],
+    typeSerializers: flatMap(
+      variants,
+      Variant.match({
+        Unit: () => [] as TypeSerializer[],
+        NewType: (_, type) => generateTypesSerializers(type),
+        Struct: (_, members) =>
+          flatMap(enumerateStructFields(members), m =>
+            generateTypesSerializers(m.type)
+          ),
+        Tuple: (_, types) => flatMap(types, generateTypesSerializers)
+      })
+    )
   }),
   default: () => ({ blocks: [], requiredImports: [], typeSerializers: [] })
   // Newtype: (name, type) => [
@@ -224,18 +283,10 @@ export const entries2SerBlocks = (
   ];
 };
 
-const unique = <T, U>(arr: T[], key: (el: T) => U): T[] =>
-  arr.reduce(
-    ({ res, set }, el) =>
-      set.has(key(el))
-        ? { res, set }
-        : { res: res.concat(el), set: set.add(key(el)) },
-    { res: [] as T[], set: new Set<U>() }
-  ).res;
-
 const genEnumIndexMapping = (enumName: string, variants: string[]) =>
   ts.ConstVar({
     name: enumMappingName(enumName),
+    dontExport: true,
     expression: `{${variants.map((v, i) => ` ${v}: ${i}`).join(',\n')}}`,
     type: '{[key: string]:number}'
   });
@@ -246,89 +297,56 @@ const genUnionSerializers = (
   sinkArg: string
 ) =>
   `{
-  const s = ${Ser.Scalar}.${Scalar.U32}(${sinkArg}, ${enumMappingName(
+  const s = ${WriteScalar[Scalar.U32]}(${sinkArg}, ${enumMappingName(
     unionName
   )}[val.tag])
   
-  ${variants.map(
-    v => `if (val.tag === "${getVariantName(v)}") {
-    return ${Variant.match(v, {
-      Unit: () => `s`,
-      Struct: name => `${serFuncName(variantStructName(unionName,name))}(s, val.value)`,
-      NewType: (_, type) => `${serializerNameFor(type)}(s, val.value)`,
-      Tuple: name => `${serFuncName(variantStructName(unionName,name))}(s, val.value)`,
-      default: () => 's'
-    })}
+  ${variants
+    .map(v =>
+      Variant.match<[VariantT, string]>(v, {
+        Unit: () => [v, ''],
+        Struct: name => [
+          v,
+          `${serFuncName(
+            variantPayloadTypeName(unionName, name)
+          )}(s, val.value)`
+        ],
+        NewType: (_, type) => [v, `${serializerNameFor(type)}(s, val.value)`],
+        Tuple: name => [
+          v,
+          `${serFuncName(
+            variantPayloadTypeName(unionName, name)
+          )}(s, val.value)`
+        ]
+      })
+    )
+    .filter(([_, retExpression]) => retExpression !== '')
+    .map(
+      ([v, retExp]) => `if (val.tag === "${getVariantName(v)}") {
+    return ${retExp};
   }`
-  ).join('\n')}
+    )
+    .join('\n')}
+    return s;
  }`;
 
-// const genAliasSerialization = (aliasName: string, type: Type): TsFileBlockT[] =>
-//   generateTypesSerializers(type)
-//     .map(({ body, serType, typeChain }) =>
-//       ts.ArrowFunc({
-//         name: serializerChainName(typeChain),
-//         params: [
-//           { name: 'sink', type: Types.Sink },
-//           { name: 'val', type: typeToString(serType) }
-//         ],
-//         dontExport: true,
-//         returnType: Types.Sink,
-//         body
-//       })
-//     )
-//     .concat(
-//       ts.ConstVar({
-//         name: serFuncName(aliasName),
-//         expression: serializerChainName(traverseType(type))
-//       })
-//     ); // ts.ArrowFunc({
-//   name: serFuncName(aliasName),
-//   params: [
-//     { name: 'sink', type: Types.Sink },
-//     { name: 'val', type: aliasName }
-//   ],
-//   returnType: Types.Sink,
-//   body:
-//     genTypeSerializationBody(type, 'sink', 'val') +
-//     '\n' +
-//     '//' +
-//     enumerateType(type)
-// });
-
-// `
-// Option<bool>
-// write_opt(sink, val, write_scalar.BOOL)
-// `;
-
-// `
-
-// const Bla = Alias('Aha', T.Vec(T.Option(T.Vec(T.Scalar.Str))));
-
-// export type Aha = Array<(Array<string>) | undefined>;
-
-// export const serializeAha = (sink: Sink, val: Aha): Sink =>
-//   write_seq(sink, val, (s, v) =>
-//     write_opt(s, v, (s, v) => write_seq(s, v, write_scalar.Str))
-//   );
-// `;
 const collectRequiredImports = (
   type: Type,
   imports: typeof Import.T[] = []
 ): typeof Import.T[] => {
   switch (type.tag) {
     case TypeTag.Scalar:
-      return imports.concat(fromLibrary(Ser.Scalar));
+      return imports.concat(fromLibrary(WriteScalar[type.value]));
     case TypeTag.RefTo:
       return imports.concat(fromTypesDeclaration(type.value));
     case TypeTag.Vec:
       return imports.concat(
-        fromLibrary(Ser.Seq),
+        fromLibrary(Write.Seq),
         ...collectRequiredImports(type.value)
       );
     case TypeTag.Option:
       return imports.concat(
-        fromLibrary(Ser.Opt),
+        fromLibrary(Write.Opt),
         ...collectRequiredImports(type.value)
       );
   }
@@ -377,69 +395,70 @@ const generateTypesSerializers = (
           typeChain: traverseType(type),
           fromType: type,
           body: `${
-            type.tag === TypeTag.Option ? Ser.Opt : Ser.Seq
+            type.tag === TypeTag.Option ? Write.Opt : Write.Seq
           }(sink, val, ${serializerChainName(traverseType(type.value))})`
         })
       );
   }
 };
 
-// const genTypeSerializationBody = (
-//   type: Type,
-//   sinkArg: string,
-//   valArg: string
-// ): string => {
-//   switch (type.tag) {
-//     case TypeTag.Scalar:
-//       return `${Ser.Scalar}.${type.value}(${sinkArg}, ${valArg})`;
-//     case TypeTag.Option:
-//       return `${Ser.Opt}(${sinkArg}, ${valArg}, ${genTypeSerFunction(
-//         type.value
-//       )})`;
-//     case TypeTag.RefTo:
-//       return `${serFuncName(type.value)}(${sinkArg}, ${valArg})`;
-//     case TypeTag.Vec:
-//       return `${Ser.Seq}(${sinkArg}, ${valArg}, ${genTypeSerFunction(
-//         type.value
-//       )})`;
-//   }
-// };
-
-// const genTypeSerFunction = (type: Type): string => {
-//   switch (type.tag) {
-//     case TypeTag.Scalar:
-//       return `${Ser.Scalar}.${type.value}`;
-//     case TypeTag.RefTo:
-//       return serFuncName(type.value);
-//     case TypeTag.Option:
-//     case TypeTag.Vec:
-//       // return `(s:${Types.Sink}, v:${typeToString(
-//       return `(s, v)=>${genTypeSerializationBody(type, `s`, `v`)}`;
-//   }
-// };
-
-const genEnumSerialization = (name: string) =>
+const generateEnumSerializer = (name: string): TsFileBlockT =>
   ts.ArrowFunc({
     name: serFuncName(name),
     returnType: Types.Sink,
     params: [{ name: 'sink', type: Types.Sink }, { name: 'val', type: name }],
-    body: `${Ser.Scalar}.${Scalar.U32}(sink, ${enumMappingName(name)}[val])`
+    body: `${WriteScalar[Scalar.U32]}(sink, ${enumMappingName(name)}[val])`
   });
+
+const generateStructSerializer = (
+  name: string,
+  fields: { name: string; type: Type }[],
+  shouldExport: boolean
+): TsFileBlockT =>
+  ts.ArrowFunc({
+    name: serFuncName(name),
+    returnType: Types.Sink,
+    body: composeTypeSerializers(fields, 'sink'),
+    dontExport: !shouldExport || undefined,
+    params: [
+      { name: 'sink', type: Types.Sink },
+      { name: `{${fields.map(f => f.name).join(', ')}}`, type: name }
+    ]
+  });
+
+const enumerateStructFields = (members: StructMembers) =>
+  Object.keys(members).map(name => ({
+    name,
+    type: members[name]
+  }));
+
+const generateTupleSerializer = (
+  tupleName: string,
+  types: Type[],
+  shouldExport: boolean
+): TsFileBlockT =>
+  ts.ArrowFunc({
+    name: serFuncName(tupleName),
+    returnType: Types.Sink,
+    body: composeTypeSerializers(
+      types.map((type, i) => ({ type, name: `val[${i}]` })),
+      'sink'
+    ),
+    dontExport: !shouldExport || undefined,
+    params: [
+      { name: 'sink', type: Types.Sink },
+      { name: 'val', type: tupleName }
+    ]
+  });
+
+const unique = <T, U>(arr: T[], key: (el: T) => U): T[] =>
+  arr.reduce(
+    ({ res, set }, el) =>
+      set.has(key(el))
+        ? { res, set }
+        : { res: res.concat(el), set: set.add(key(el)) },
+    { res: [] as T[], set: new Set<U>() }
+  ).res;
 
 const flatMap = <T, U>(a: T[], f: (t: T) => U[]): U[] =>
   a.reduce((s, el) => s.concat(f(el)), [] as U[]);
-
-// type Type = { tag: 'n'; value: number } | { tag: 's'; value: string };
-
-// const Funcs = {
-//   n: (n: number) => n.toString(),
-//   s: (s: string) => s
-// };
-
-// const test = ({ tag, value }: Type) => {
-//   if (tag === 'n') {
-//     Funcs[tag](value);
-//   }
-
-//   const a = Funcs[tag](value as any);
-// };

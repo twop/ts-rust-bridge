@@ -31,7 +31,8 @@
   },
   "scripts": {
     "build": "pack build",
-    "example": "ts-node -r esm examples/genBasic.ts"
+    "example": "ts-node -r esm examples/genBasic.ts",
+    "runExample": "ts-node -r esm examples/runExample.ts"
   },
   "dependencies": {
     "ts-union": "^2.1.1"

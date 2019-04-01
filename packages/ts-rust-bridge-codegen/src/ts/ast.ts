@@ -42,6 +42,7 @@ export module D {
   export type ConstVar = {
     name: string;
     type?: string;
+    dontExport?: true;
     expression: string;
   };
 
