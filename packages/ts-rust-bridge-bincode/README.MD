@@ -71,7 +71,7 @@ Now let's try to serialize it to bincode format
 import { Sink, SerFunc } from 'ts-rust-bridge-bincode';
 
 // generated serialization file
-import { writeMessage} from './generated/basic.ser.generated';
+import { writeMessage } from './generated/basic.ser.generated';
 
 // generated types file
 import { Message } from './basic.generated';
@@ -89,16 +89,15 @@ const writeAThing = <T>(thing: T, ser: SerFunc<T>): Uint8Array => {
 };
 
 writeAThing(Message.Two(true, 7), writeMessage);
-// [ 3, 0, 0, 0, 0, 0, 0, 0, 84, 119, 111, 1, 1, 7, 0, 0, 0 ] 
+// [ 3, 0, 0, 0, 0, 0, 0, 0, 84, 119, 111, 1, 1, 7, 0, 0, 0 ]
 
 // [ 3, 0, 0, 0, 0, 0, 0, 0 ] -> u64 === 3 (len of "Two")
 // [ 84, 119, 111 ] -> "Two"
 // 1 -> Some. Yes we have a value
 // 1 -> true. And the value is "true"
-// [ 7, 0, 0, 0 ] -> u32 === 7 
+// [ 7, 0, 0, 0 ] -> u32 === 7
 ```
 
-Note that we serialize variant tag as a string "Two" because of `#[serde(tag = "tag", content = "value")]` in rust defenition. Without it "Two" can be serialized as u32 instead.
-
+Note that we serialize variant tag as a string "Two" because of `#[serde(tag = "tag", content = "value")]` in rust definition. Without it "Two" can be serialized as u32 instead.
 
 Look at `examples` under `ts-rust-bridge-codegen` dir for more details.
