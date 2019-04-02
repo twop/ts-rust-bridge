@@ -7,23 +7,21 @@ use serde::Deserialize;
 #[serde(tag = "tag", content = "value")]
 pub enum Message {
     Unit,
+    AnotherUnit,
     One(f32),
-    Two(Option<bool>, f32),
+    Two(Option<bool>, u32),
     VStruct { id: String, data: String },
 }
 
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct Newtype(pub u32);
-
-
-pub type NewtypeAlias = Newtype;
+pub struct NType(pub u32);
 
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct NormalStruct {
-    pub a: f32,
-    pub msg: Message,
+    pub a: u8,
+    pub tuple: Tuple,
 }
 
 
@@ -37,4 +35,7 @@ pub enum Enum {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Tuple(pub Option<bool>, pub Vec<String>);
+
+
+pub type Aha = Vec<Option<Vec<String>>>;
 

@@ -17,7 +17,8 @@ export const ast2ts = (tsBlocks: (TsFileBlockT | Module)[]): FileBlock[] =>
               ArrowFunc: genArrowFunc,
               Union: genUnion,
               Alias: genAlias,
-              ConstVar: genConstVariable
+              ConstVar: genConstVariable,
+              Import: genImport
             })
           ),
     [] as FileBlock[]
@@ -53,9 +54,10 @@ const genArrowFunc = ({
   params,
   returnType,
   wrappedInBraces,
-  body
+  body,
+  dontExport
 }: D.ArrowFunc): FileBlock =>
-  `export const ${name} = (${params
+  `${dontExport ? '' : 'export '}const ${name} = (${params
     .map(({ name: n, type }) => `${n}: ${type}`)
     .join(', ')})${returnType ? `: ${returnType}` : ''} => ${
     wrappedInBraces
@@ -85,5 +87,15 @@ ${variants
 const genAlias = ({ name, toType }: D.Alias): FileBlock =>
   `export type ${name} = ${toType}`;
 
-const genConstVariable = ({ name, type, expression }: D.ConstVar): FileBlock =>
-  `export const ${name}${type ? `: ${type}` : ''} = ${expression};`;
+const genConstVariable = ({
+  name,
+  type,
+  expression,
+  dontExport
+}: D.ConstVar): FileBlock =>
+  `${dontExport ? '' : 'export '}const ${name}${
+    type ? `: ${type}` : ''
+  } = ${expression};`;
+
+const genImport = ({ names, from }: D.Import): FileBlock =>
+  `import { ${names.join(', ')} } from "${from}";`;

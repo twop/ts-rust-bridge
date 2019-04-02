@@ -1,16 +1,25 @@
 export type Message =
   | { tag: 'Unit' }
+  | { tag: 'AnotherUnit' }
   | { tag: 'One'; value: number }
-  | { tag: 'Two'; value: [(boolean) | undefined, number] }
-  | { tag: 'VStruct'; value: MessageVStruct };
+  | { tag: 'Two'; value: Message_Two }
+  | { tag: 'VStruct'; value: Message_VStruct };
 
-export interface MessageVStruct {
+export interface Message_Two {
+  0: (boolean) | undefined;
+  1: number;
+  length: 2;
+}
+
+export interface Message_VStruct {
   id: string;
   data: string;
 }
 
 export module Message {
   export const Unit: Message = { tag: 'Unit' };
+
+  export const AnotherUnit: Message = { tag: 'AnotherUnit' };
 
   export const One = (value: number): Message => ({ tag: 'One', value });
 
@@ -19,23 +28,21 @@ export module Message {
     value: [p0, p1]
   });
 
-  export const VStruct = (value: MessageVStruct): Message => ({
+  export const VStruct = (value: Message_VStruct): Message => ({
     tag: 'VStruct',
     value
   });
 }
 
-export type Newtype = number & { type: 'Newtype' };
+export type NType = number & { type: 'NType' };
 
-export module Newtype {
-  export const mk = (val: number): number & { type: 'Newtype' } => val as any;
+export module NType {
+  export const mk = (val: number): number & { type: 'NType' } => val as any;
 }
-
-export type NewtypeAlias = Newtype;
 
 export interface NormalStruct {
   a: number;
-  msg: Message;
+  tuple: Tuple;
 }
 
 export enum Enum {
@@ -56,3 +63,5 @@ export module Tuple {
     p1
   ];
 }
+
+export type Aha = Array<(Array<string>) | undefined>;

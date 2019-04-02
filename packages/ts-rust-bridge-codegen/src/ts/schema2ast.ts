@@ -6,7 +6,8 @@ import {
   EntryType,
   TypeTag,
   Variant,
-  VariantT
+  VariantT,
+  getVariantName
 } from '../schema';
 
 import { TsFileBlockT, TsFileBlock as ts, D } from './ast';
@@ -65,15 +66,15 @@ const unionToTaggedUnion = (name: string, variants: VariantT[]): TsFileBlockT =>
     tagField: 'tag',
     valueField: 'value',
     variants: variants.map(v => ({
-      tag: variantName(v),
-      valueType: variantPayload(name, v)
+      tag: getVariantName(v),
+      valueType: variantPayloadType(name, v)
     }))
   });
 
 const newtypeToTypeAlias = (name: string, type: Type): TsFileBlockT =>
   ts.Alias({
     name,
-    toType: newtypeToStr(type, name)
+    toType: newtypeToTypeStr(type, name)
   });
 
 const newtypeToConstructor = (name: string, type: Type): TsFileBlockT =>
@@ -86,7 +87,7 @@ const newtypeToConstructor = (name: string, type: Type): TsFileBlockT =>
       }
     ],
     body: `(val as any)`,
-    returnType: newtypeToStr(type, name)
+    returnType: newtypeToTypeStr(type, name)
   });
 
 const unionToPayloadInterfaces = (
@@ -97,7 +98,19 @@ const unionToPayloadInterfaces = (
     (interfaces, v) =>
       Variant.match(v, {
         Struct: (structName, members) =>
-          interfaces.concat(structToInterface(unionName + structName, members)),
+          interfaces.concat(
+            structToInterface(
+              variantPayloadTypeName(unionName, structName),
+              members
+            )
+          ),
+        Tuple: (tupleName, types) =>
+          interfaces.concat(
+            tupleToInterface(
+              variantPayloadTypeName(unionName, tupleName),
+              types
+            )
+          ),
         default: () => interfaces
       }),
     [] as TsFileBlockT[]
@@ -109,7 +122,7 @@ const unionToConstructors = (
 ): TsFileBlockT[] =>
   variants.map(v => {
     const params = variantToCtorParameters(unionName, v);
-    const name = variantName(v);
+    const name = getVariantName(v);
     return params.length > 0
       ? ts.ArrowFunc({
           name,
@@ -127,7 +140,7 @@ const unionToConstructors = (
 const variantToCtorParameters = (unionName: string, v: VariantT): D.Field[] =>
   Variant.match(v, {
     Struct: name => [
-      { name: 'value', type: structVariantInterfaceName(unionName, name) }
+      { name: 'value', type: variantPayloadTypeName(unionName, name) }
     ],
     Unit: () => [],
     NewType: (_, type) => [{ name: 'value', type: typeToString(type) }],
@@ -143,16 +156,17 @@ const variantToCtorBody = Variant.match({
     `{ tag: "${name}", value: [${fields.map((_, i) => `p${i}`)}]}`
 });
 
-const variantPayload = (unionName: string, v: VariantT): string | undefined =>
+const variantPayloadType = (
+  unionName: string,
+  v: VariantT
+): string | undefined =>
   Variant.match(v, {
-    Struct: name => structVariantInterfaceName(unionName, name),
+    Struct: name => variantPayloadTypeName(unionName, name),
+    Tuple: name => variantPayloadTypeName(unionName, name),
     Unit: () => undefined,
-    NewType: (_, type) => typeToString(type),
-    Tuple: (_, fields) => `[${fields.map(typeToString).join(', ')}]`
+    NewType: (_, type) => typeToString(type)
+    // Tuple: (_, fields) => `[${fields.map(typeToString).join(', ')}]`
   });
-
-const structVariantInterfaceName = (unionName: string, variantName: string) =>
-  `${unionName + variantName}`;
 
 const structToInterface = (
   name: string,
@@ -206,7 +220,7 @@ const scalarToString = (scalar: Scalar): string => {
   }
 };
 
-const typeToString = (type: Type): string => {
+export const typeToString = (type: Type): string => {
   switch (type.tag) {
     case TypeTag.Option:
       return `(${typeToString(type.value)}) | undefined`;
@@ -219,12 +233,10 @@ const typeToString = (type: Type): string => {
   }
 };
 
-const variantName = Variant.match({
-  Struct: s => s,
-  Unit: s => s,
-  Tuple: s => s,
-  NewType: s => s
-});
-
-const newtypeToStr = (type: Type, name: string): string =>
+const newtypeToTypeStr = (type: Type, name: string): string =>
   `${typeToString(type)} & { type: '${name}'}`;
+
+export const variantPayloadTypeName = (
+  unionName: string,
+  variantName: string
+): string => unionName + '_' + variantName;

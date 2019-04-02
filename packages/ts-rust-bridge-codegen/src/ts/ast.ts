@@ -31,6 +31,7 @@ export module D {
     returnType?: string;
     wrappedInBraces?: true;
     body: string;
+    dontExport?: true;
   };
 
   export type Alias = {
@@ -41,7 +42,13 @@ export module D {
   export type ConstVar = {
     name: string;
     type?: string;
+    dontExport?: true;
     expression: string;
+  };
+
+  export type Import = {
+    names: string[];
+    from: string;
   };
 }
 
@@ -51,7 +58,8 @@ export const TsFileBlock = Union({
   Union: of<D.Union>(),
   ArrowFunc: of<D.ArrowFunc>(),
   Alias: of<D.Alias>(),
-  ConstVar: of<D.ConstVar>()
+  ConstVar: of<D.ConstVar>(),
+  Import: of<D.Import>()
 });
 
 export type TsFileBlockT = typeof TsFileBlock.T;

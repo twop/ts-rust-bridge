@@ -64,19 +64,25 @@ export const T = {
   Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
   RefTo: (value: string | EntryT): Type => ({
     tag: TypeTag.RefTo,
-    value:
-      typeof value === 'string'
-        ? value
-        : EntryType.match(value, {
-            Alias: getName,
-            Struct: getName,
-            Enum: getName,
-            Tuple: getName,
-            Newtype: getName,
-            Union: getName
-          })
+    value: typeof value === 'string' ? value : getEntryName(value)
   })
 };
+
+const getEntryName = EntryType.match({
+  Alias: getName,
+  Struct: getName,
+  Enum: getName,
+  Tuple: getName,
+  Newtype: getName,
+  Union: getName
+});
+
+export const getVariantName = Variant.match({
+  Struct: getName,
+  Tuple: getName,
+  NewType: getName,
+  Unit: getName
+});
 
 export type EntryT = typeof EntryType.T;
 export type VariantT = typeof Variant.T;

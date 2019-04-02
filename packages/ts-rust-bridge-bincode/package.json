@@ -1,7 +1,7 @@
 {
-  "name": "ts-rust-bridge-codegen",
-  "version": "0.1.1",
-  "description": "A toolset to build efficient communication between rust and typescript",
+  "name": "ts-rust-bridge-bincode",
+  "version": "0.1.0",
+  "description": "A collection of helper functions to serialize data structures in typescript to rust bincode format",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,24 +30,14 @@
     ]
   },
   "scripts": {
-    "build": "pack build",
-    "example": "ts-node -r esm examples/genBasic.ts",
-    "runExample": "ts-node -r esm examples/runExample.ts"
+    "build": "pack build"
   },
-  "dependencies": {
-    "ts-union": "^2.1.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@pika/pack": "^0.3.4",
     "@pika/plugin-build-node": "^0.3.14",
     "@pika/plugin-build-web": "^0.3.14",
     "@pika/plugin-ts-standard-pkg": "^0.3.14",
-    "@types/node": "^11.9.3",
-    "@types/prettier": "^1.16.1",
-    "esm": "^3.2.14",
-    "prettier": "^1.16.4",
-    "ts-morph": "^1.1.0",
-    "ts-node": "^8.0.2",
     "typescript": "3.3.3"
   }
 }
