@@ -19,7 +19,7 @@ import {
   write_seq,
   Sink,
   SerFunc
-} from '../../src/ser/ser';
+} from '../../../ts-rust-bridge-bincode/src/index';
 
 const writeOptBool = (sink: Sink, val: (boolean) | undefined): Sink =>
   write_opt(sink, val, write_bool);
@@ -35,27 +35,19 @@ const writeVecOptVecStr = (
 const writeOptVecStr = (sink: Sink, val: (Array<string>) | undefined): Sink =>
   write_opt(sink, val, writeVecStr);
 
-const MessageMap: { [key: string]: number } = {
-  Unit: 0,
-  AnotherUnit: 1,
-  One: 2,
-  Two: 3,
-  VStruct: 4
-};
-
 export const writeMessage = (sink: Sink, val: Message): Sink => {
-  const s = write_u32(sink, MessageMap[val.tag]);
-
-  if (val.tag === 'One') {
-    return write_f32(s, val.value);
+  switch (val.tag) {
+    case 'Unit':
+      return write_str(sink, 'Unit');
+    case 'AnotherUnit':
+      return write_str(sink, 'AnotherUnit');
+    case 'One':
+      return write_f32(write_str(sink, 'One'), val.value);
+    case 'Two':
+      return writeMessage_Two(write_str(sink, 'Two'), val.value);
+    case 'VStruct':
+      return writeMessage_VStruct(write_str(sink, 'VStruct'), val.value);
   }
-  if (val.tag === 'Two') {
-    return writeMessage_Two(s, val.value);
-  }
-  if (val.tag === 'VStruct') {
-    return writeMessage_VStruct(s, val.value);
-  }
-  return s;
 };
 
 const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>

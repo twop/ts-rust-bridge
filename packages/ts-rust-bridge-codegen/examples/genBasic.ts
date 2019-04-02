@@ -2,7 +2,7 @@ import {
   schema2rust,
   schema2ts,
   ast2ts,
-  entries2SerBlocks
+  schema2serializers
 } from '../src/index';
 import { exampleEntries } from './basic.ast';
 import { format } from 'prettier';
@@ -25,7 +25,11 @@ ${schema2ts(exampleEntries).join('\n\n')}
 
 const tsSerContent = `
 ${ast2ts(
-  entries2SerBlocks(exampleEntries, `./basic.generated`, `../../src/ser/ser`)
+  schema2serializers({
+    entries: exampleEntries,
+    typesDeclarationFile: `./basic.generated`,
+    pathToBincodeLib: `../../../ts-rust-bridge-bincode/src/index`
+  })
 ).join('\n\n')}
 `;
 

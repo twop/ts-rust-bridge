@@ -78,6 +78,6 @@ export module Message {
 
 Now you can serialize them as JSON.
 
-Note: bincode support is incoming.
+Note: bincode support is also WIP in the `ts-rust-bridge-bincode` repo.
 
 Look at `examples` dir for more details.

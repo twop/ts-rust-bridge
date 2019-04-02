@@ -5,8 +5,10 @@ export type Sink = {
 
 export type SerFunc<T> = (sink: Sink, val: T) => Sink;
 
-const ai32 = new Int32Array(2);
-const af32 = new Float32Array(ai32.buffer);
+const au32 = new Uint32Array(1);
+// const au16 = new Uint16Array(au32.buffer);
+// const au8 = new Uint8Array(au32.buffer);
+const af32 = new Float32Array(au32.buffer);
 
 const reserve = (sink: Sink, numberOfBytes: number): Sink => {
   const { arr, pos } = sink;
@@ -51,15 +53,17 @@ export const write_u16: SerFunc<number> = (sink, val) =>
   wb(wb(reserve(sink, 2), val), val >> 8);
 
 export const write_u64: SerFunc<number> = (sink, val) =>
-  write_u32(write_u32(reserve(sink, 8), 0), val);
+  write_u32(write_u32(reserve(sink, 8), val), 0);
 
 export const write_f32: SerFunc<number> = (sink, val) => {
   af32[0] = val; // just translate the bytes from float to i32
-  return write_u32(reserve(sink, 4), ai32[0]);
+  return write_u32(reserve(sink, 4), au32[0]);
 };
 
-export const write_str: SerFunc<string> = (sink, val) =>
-  write_bytes(write_u64(sink, val.length), encoder.encode(val));
+export const write_str: SerFunc<string> = (sink, val) => {
+  const bytes = encoder.encode(val);
+  return write_bytes(write_u64(sink, bytes.length), bytes);
+};
 
 export const write_bool: SerFunc<boolean> = (sink, val) =>
   write_u8(sink, val ? 1 : 0);

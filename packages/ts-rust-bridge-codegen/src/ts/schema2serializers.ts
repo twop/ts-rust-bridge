@@ -174,7 +174,7 @@ const entry2SerBlocks = EntryType.match({
       )
     ],
     blocks: [
-      genEnumIndexMapping(unionName, variants.map(getVariantName)),
+      // genEnumIndexMapping(unionName, variants.map(getVariantName)),
       ts.ArrowFunc({
         name: serFuncName(unionName),
         body: genUnionSerializers(unionName, variants, 'sink'),
@@ -217,12 +217,7 @@ const entry2SerBlocks = EntryType.match({
         Tuple: (_, types) => flatMap(types, generateTypesSerializers)
       })
     )
-  }),
-  default: () => ({ blocks: [], requiredImports: [], typeSerializers: [] })
-  // Newtype: (name, type) => [
-  //   newtypeToTypeAlias(name, type),
-  //   Module(name, [newtypeToConstructor(name, type)])
-  // ]
+  })
 });
 
 // aka write_u32(write_u32(sink, 0), val)
@@ -242,11 +237,15 @@ const composeTypeSerializers = (
   );
 };
 
-export const entries2SerBlocks = (
-  entries: EntryT[],
-  typesDeclarationFile: string,
-  serLib: string
-): TsFileBlockT[] => {
+export const schema2serializers = ({
+  entries,
+  typesDeclarationFile,
+  pathToBincodeLib
+}: {
+  entries: EntryT[];
+  typesDeclarationFile: string;
+  pathToBincodeLib: string;
+}): TsFileBlockT[] => {
   const pieces = entries.map(entry2SerBlocks);
 
   // TODO cleanup
@@ -263,7 +262,7 @@ export const entries2SerBlocks = (
     ts.Import({ names: unique(decl, s => s), from: typesDeclarationFile }),
     ts.Import({
       names: unique(lib.concat(Types.Sink, Types.SerFunc), s => s),
-      from: serLib
+      from: pathToBincodeLib
     }),
     ...unique(flatMap(pieces, p => p.typeSerializers), s =>
       serializerChainName(s.typeChain)
@@ -297,37 +296,31 @@ const genUnionSerializers = (
   sinkArg: string
 ) =>
   `{
-  const s = ${WriteScalar[Scalar.U32]}(${sinkArg}, ${enumMappingName(
-    unionName
-  )}[val.tag])
-  
+  switch (val.tag) {
   ${variants
-    .map(v =>
-      Variant.match<[VariantT, string]>(v, {
-        Unit: () => [v, ''],
-        Struct: name => [
-          v,
+    .map(v => ({
+      v,
+      tag: getVariantName(v),
+      sink: `${WriteScalar[Scalar.Str]}(${sinkArg}, "${getVariantName(v)}")`
+    }))
+    .map(({ v, tag, sink }) => ({
+      exp: Variant.match(v, {
+        Unit: () => sink,
+        Struct: name =>
           `${serFuncName(
             variantPayloadTypeName(unionName, name)
-          )}(s, val.value)`
-        ],
-        NewType: (_, type) => [v, `${serializerNameFor(type)}(s, val.value)`],
-        Tuple: name => [
-          v,
+          )}(${sink}, val.value)`,
+        NewType: (_, type) => `${serializerNameFor(type)}(${sink}, val.value)`,
+        Tuple: name =>
           `${serFuncName(
             variantPayloadTypeName(unionName, name)
-          )}(s, val.value)`
-        ]
-      })
-    )
-    .filter(([_, retExpression]) => retExpression !== '')
-    .map(
-      ([v, retExp]) => `if (val.tag === "${getVariantName(v)}") {
-    return ${retExp};
-  }`
-    )
+          )}(${sink}, val.value)`
+      }),
+      tag
+    }))
+    .map(({ tag, exp }) => `case "${tag}": return ${exp};`)
     .join('\n')}
-    return s;
+  };
  }`;
 
 const collectRequiredImports = (
