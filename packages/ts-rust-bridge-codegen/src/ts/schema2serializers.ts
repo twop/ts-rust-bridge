@@ -298,16 +298,16 @@ const genUnionSerializers = (
   `{
   switch (val.tag) {
   ${variants
-    .map(v => ({
-      v,
-      tag: getVariantName(v),
-      sink: `${WriteScalar[Scalar.Str]}(${sinkArg}, "${getVariantName(v)}")`
-    }))
-    // .map((v, i) => ({
+    // .map(v => ({
     //   v,
     //   tag: getVariantName(v),
-    //   sink: `${WriteScalar[Scalar.U32]}(${sinkArg}, ${i})`
+    //   sink: `${WriteScalar[Scalar.Str]}(${sinkArg}, "${getVariantName(v)}")`
     // }))
+    .map((v, i) => ({
+      v,
+      tag: getVariantName(v),
+      sink: `${WriteScalar[Scalar.U32]}(${sinkArg}, ${i})`
+    }))
     .map(({ v, tag, sink }) => ({
       exp: Variant.match(v, {
         Unit: () => sink,

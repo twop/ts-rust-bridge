@@ -18,13 +18,17 @@ export type StructMembers = {
   [prop: string]: Type;
 };
 
+export type UnionOptions = {
+  tagAnnotation: boolean;
+};
+
 export const EntryType = Union({
   Alias: of<string, Type>(),
   Struct: of<string, StructMembers>(),
   Enum: of<string, EnumVariants>(),
   Tuple: of<string, Type[]>(),
   Newtype: of<string, Type>(),
-  Union: of<string, VariantT[]>()
+  Union: of<string, VariantT[], UnionOptions>()
 });
 
 export const Variant = Union({

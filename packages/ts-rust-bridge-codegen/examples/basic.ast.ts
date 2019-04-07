@@ -13,13 +13,17 @@ const NormalStruct = Struct('NormalStruct', {
   tuple: T.RefTo(MyTuple)
 });
 
-const Message = Union('Message', [
-  V.Unit('Unit'),
-  V.Unit('AnotherUnit'),
-  V.NewType('One', T.Scalar.F32),
-  V.Tuple('Two', [T.Option(T.Scalar.Bool), T.Scalar.U32]),
-  V.Struct('VStruct', { id: T.Scalar.Str, data: T.Scalar.Str })
-]);
+const Message = Union(
+  'Message',
+  [
+    V.Unit('Unit'),
+    V.Unit('AnotherUnit'),
+    V.NewType('One', T.Scalar.F32),
+    V.Tuple('Two', [T.Option(T.Scalar.Bool), T.Scalar.U32]),
+    V.Struct('VStruct', { id: T.Scalar.Str, data: T.Scalar.Str })
+  ],
+  { tagAnnotation: false }
+);
 
 const Vec3 = Tuple('Vec3', [T.Scalar.F32, T.Scalar.F32, T.Scalar.F32]);
 const Color = Tuple('Color', [T.Scalar.U8, T.Scalar.U8, T.Scalar.U8]);
@@ -28,11 +32,15 @@ const Figure = Struct('Figure', {
   colors: T.Vec(T.RefTo(Color))
 });
 
-const Container = Union('Container', [
-  V.Unit('Units'),
-  V.NewType('JustNumber', T.Scalar.U32),
-  V.NewType('Figures', T.Vec(T.RefTo(Figure)))
-]);
+const Container = Union(
+  'Container',
+  [
+    V.Unit('Units'),
+    V.NewType('JustNumber', T.Scalar.U32),
+    V.NewType('Figures', T.Vec(T.RefTo(Figure)))
+  ],
+  { tagAnnotation: false }
+);
 
 const NType = Newtype('NType', T.Scalar.U32);
 

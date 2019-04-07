@@ -4,7 +4,6 @@ use serde::Deserialize;
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "tag", content = "value")]
 pub enum Message {
     Unit,
     AnotherUnit,
@@ -19,7 +18,6 @@ pub struct NType(pub u32);
 
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "tag", content = "value")]
 pub enum Container {
     Units,
     JustNumber(u32),

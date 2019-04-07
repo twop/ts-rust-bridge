@@ -8,7 +8,8 @@ import {
   TypeTag,
   Variant,
   VariantT,
-  FileBlock
+  FileBlock,
+  UnionOptions
 } from '../schema';
 
 export const schema2rust = (entries: EntryT[]): FileBlock[] =>
@@ -58,9 +59,14 @@ ${Object.keys(members)
 }
 `;
 
-const unionToEnum = (name: string, variants: VariantT[]): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(tag = "tag", content = "value")]
+const unionToEnum = (
+  name: string,
+  variants: VariantT[],
+  { tagAnnotation }: UnionOptions
+): string => `
+#[derive(Deserialize, Serialize, Debug, Clone)]${
+  tagAnnotation ? '\n#[serde(tag = "tag", content = "value")]' : ''
+}
 pub enum ${name} {
 ${variants.map(v => `    ${variantStr(v)},`).join('\n')}
 }

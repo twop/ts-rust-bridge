@@ -51,15 +51,15 @@ const writeOptVecStr = (sink: Sink, val: (Array<string>) | undefined): Sink =>
 export const writeMessage = (sink: Sink, val: Message): Sink => {
   switch (val.tag) {
     case 'Unit':
-      return write_str(sink, 'Unit');
+      return write_u32(sink, 0);
     case 'AnotherUnit':
-      return write_str(sink, 'AnotherUnit');
+      return write_u32(sink, 1);
     case 'One':
-      return write_f32(write_str(sink, 'One'), val.value);
+      return write_f32(write_u32(sink, 2), val.value);
     case 'Two':
-      return writeMessage_Two(write_str(sink, 'Two'), val.value);
+      return writeMessage_Two(write_u32(sink, 3), val.value);
     case 'VStruct':
-      return writeMessage_VStruct(write_str(sink, 'VStruct'), val.value);
+      return writeMessage_VStruct(write_u32(sink, 4), val.value);
   }
 };
 
@@ -76,11 +76,11 @@ export const writeNType: SerFunc<NType> = write_u32;
 export const writeContainer = (sink: Sink, val: Container): Sink => {
   switch (val.tag) {
     case 'Units':
-      return write_str(sink, 'Units');
+      return write_u32(sink, 0);
     case 'JustNumber':
-      return write_u32(write_str(sink, 'JustNumber'), val.value);
+      return write_u32(write_u32(sink, 1), val.value);
     case 'Figures':
-      return writeVecFigure(write_str(sink, 'Figures'), val.value);
+      return writeVecFigure(write_u32(sink, 2), val.value);
   }
 };
 
