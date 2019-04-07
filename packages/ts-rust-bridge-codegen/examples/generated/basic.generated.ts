@@ -40,6 +40,52 @@ export module NType {
   export const mk = (val: number): number & { type: 'NType' } => val as any;
 }
 
+export type Container =
+  | { tag: 'Units' }
+  | { tag: 'JustNumber'; value: number }
+  | { tag: 'Figures'; value: Array<Figure> };
+
+export module Container {
+  export const Units: Container = { tag: 'Units' };
+
+  export const JustNumber = (value: number): Container => ({
+    tag: 'JustNumber',
+    value
+  });
+
+  export const Figures = (value: Array<Figure>): Container => ({
+    tag: 'Figures',
+    value
+  });
+}
+
+export interface Color {
+  0: number;
+  1: number;
+  2: number;
+  length: 3;
+}
+
+export module Color {
+  export const mk = (p0: number, p1: number, p2: number): Color => [p0, p1, p2];
+}
+
+export interface Figure {
+  dots: Array<Vec3>;
+  colors: Array<Color>;
+}
+
+export interface Vec3 {
+  0: number;
+  1: number;
+  2: number;
+  length: 3;
+}
+
+export module Vec3 {
+  export const mk = (p0: number, p1: number, p2: number): Vec3 => [p0, p1, p2];
+}
+
 export interface NormalStruct {
   a: number;
   tuple: Tuple;

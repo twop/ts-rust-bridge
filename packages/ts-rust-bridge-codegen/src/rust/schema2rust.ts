@@ -28,23 +28,23 @@ pub type ${name} = ${typeToString(type)};
 `;
 
 const enumToEnum = (name: string, { variants }: EnumVariants): string => `
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum ${name} {
 ${variants.map(v => `    ${v},`).join('\n')}
 }
 `;
 
 const newtypeToStruct = (name: string, type: Type): string => `
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ${name}(pub ${typeToString(type)});
 `;
 
 const tupleToStruct = (name: string, fields: Type[]): string => `
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ${name}(${fields.map(t => `pub ${typeToString(t)}`).join(', ')});
 `;
 const structToStruct = (name: string, members: StructMembers): string => `
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ${name} {
 ${Object.keys(members)
   .map(n => {
@@ -59,7 +59,7 @@ ${Object.keys(members)
 `;
 
 const unionToEnum = (name: string, variants: VariantT[]): string => `
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "tag", content = "value")]
 pub enum ${name} {
 ${variants.map(v => `    ${variantStr(v)},`).join('\n')}

@@ -21,11 +21,28 @@ const Message = Union('Message', [
   V.Struct('VStruct', { id: T.Scalar.Str, data: T.Scalar.Str })
 ]);
 
+const Vec3 = Tuple('Vec3', [T.Scalar.F32, T.Scalar.F32, T.Scalar.F32]);
+const Color = Tuple('Color', [T.Scalar.U8, T.Scalar.U8, T.Scalar.U8]);
+const Figure = Struct('Figure', {
+  dots: T.Vec(T.RefTo(Vec3)),
+  colors: T.Vec(T.RefTo(Color))
+});
+
+const Container = Union('Container', [
+  V.Unit('Units'),
+  V.NewType('JustNumber', T.Scalar.U32),
+  V.NewType('Figures', T.Vec(T.RefTo(Figure)))
+]);
+
 const NType = Newtype('NType', T.Scalar.U32);
 
 export const exampleEntries: EntryT[] = [
   Message,
   NType,
+  Container,
+  Color,
+  Figure,
+  Vec3,
   // NewtypeAlias,
   NormalStruct,
   MyEnum,
