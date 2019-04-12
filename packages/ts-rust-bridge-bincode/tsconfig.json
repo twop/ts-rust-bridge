@@ -15,12 +15,10 @@
     "strictNullChecks": true,
     "strict": true
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "exclude": [
     "node_modules",
-    "__tests__",
+    // "__tests__",
     "**/__tests__",
     "src/__tests__"
   ]

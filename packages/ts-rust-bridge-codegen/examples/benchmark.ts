@@ -5,8 +5,9 @@ import {
   Color,
   Vec3
 } from './generated/basic.generated';
-import { SerFunc, Sink } from '../../ts-rust-bridge-bincode/src';
+import { SerFunc, Sink, Deserializer } from '../../ts-rust-bridge-bincode/src';
 import { writeMessage, writeContainer } from './generated/basic.ser.generated';
+import { readMessage, readContainer } from './generated/basic.deser.generated';
 
 const log = console.log;
 const measure = (name: string, func: () => void) => {
@@ -14,7 +15,7 @@ const measure = (name: string, func: () => void) => {
 
   // let fastest = 100500;
 
-  const numberOfRuns = 5;
+  const numberOfRuns = 1;
   const takeTop = 1;
 
   let runs: number[] = [];
@@ -38,7 +39,7 @@ const measure = (name: string, func: () => void) => {
   log(`${name}: ${result.toFixed(2)} ms`);
 };
 
-const COUNT = 10000;
+const COUNT = 1000;
 
 function randomStr(length: number): string {
   var text = '';
@@ -119,14 +120,23 @@ const writeAThingToSlice = <T>(thing: T, ser: SerFunc<T>): Uint8Array => {
   return sink.arr.slice(0, sink.pos);
 };
 
-runbench('messages', messages, writeMessage);
+runbench('containers', containers, writeContainer, readContainer);
+runbench('messages', messages, writeMessage, readMessage);
 
-runbench('containers', containers, writeContainer);
+containers;
+readContainer;
+writeContainer;
 
-function runbench<T>(benchName: string, data: T[], serFun: SerFunc<T>) {
+function runbench<T>(
+  benchName: string,
+  data: T[],
+  serFun: SerFunc<T>,
+  deserializer: Deserializer<T>
+) {
   setTimeout(() => {
-    log('');
-    log(benchName);
+    log('                      ');
+    log(benchName.toUpperCase());
+    log('----Serialization----');
     measure('just bincode', () => {
       data.forEach(d => writeAThingToNothing(d, serFun));
     });
@@ -136,6 +146,29 @@ function runbench<T>(benchName: string, data: T[], serFun: SerFunc<T>) {
     measure('json', () => {
       data.forEach(d => JSON.stringify(d));
     });
-  }, 0);
+    log('----Deserialization----');
+
+    const buffers = data.map(d => writeAThingToSlice(d, serFun));
+    const strings = data.map(d => JSON.stringify(d));
+
+    const res = [...data]; // just a copy
+
+    measure('D: bincode', () => {
+      buffers.forEach((b, i) => (res[i] = deserializer({ arr: b, pos: 0 })));
+    });
+
+    // res.forEach((d, i) => {
+    //   if (JSON.stringify(d) !== strings[i]) {
+    //     console.error('mismatch', {
+    //       expected: strings[i],
+    //       actual: JSON.stringify(d)
+    //     });
+    //   }
+    // });
+
+    measure('D: json', () => {
+      strings.forEach((s, i) => (res[i] = JSON.parse(s)));
+    });
+  });
 }
 // }, 1000 * 20);
