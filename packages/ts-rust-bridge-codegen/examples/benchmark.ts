@@ -15,7 +15,7 @@ const measure = (name: string, func: () => void) => {
 
   // let fastest = 100500;
 
-  const numberOfRuns = 1;
+  const numberOfRuns = 4;
   const takeTop = 1;
 
   let runs: number[] = [];
@@ -39,7 +39,7 @@ const measure = (name: string, func: () => void) => {
   log(`${name}: ${result.toFixed(2)} ms`);
 };
 
-const COUNT = 1000;
+const COUNT = 10000;
 
 function randomStr(length: number): string {
   var text = '';

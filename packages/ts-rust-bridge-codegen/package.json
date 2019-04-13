@@ -1,6 +1,6 @@
 {
   "name": "ts-rust-bridge-codegen",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A toolset to build efficient communication between rust and typescript",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,7 @@
     "build": "pack build",
     "example": "ts-node -r esm examples/genBasic.ts",
     "runExample": "ts-node -r esm examples/runExample.ts",
-    "benchmark": "node --inspect -r esm -r ts-node/register examples/benchmark.ts "
+    "benchmark": "node -r esm -r ts-node/register examples/benchmark.ts "
   },
   "dependencies": {
     "ts-union": "^2.1.1"
