@@ -4,7 +4,7 @@ import { Union, of } from 'ts-union';
 export const enum BincodeLibTypes {
   Sink = 'Sink',
   Deserializer = 'Deserializer',
-  SerFunc = 'SerFunc'
+  Serializer = 'Serializer'
 }
 
 export const traverseType = (type: Type, parts: Type[] = []): Type[] => {

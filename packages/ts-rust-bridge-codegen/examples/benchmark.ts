@@ -5,7 +5,7 @@ import {
   Color,
   Vec3
 } from './generated/basic.generated';
-import { SerFunc, Sink, Deserializer } from '../../ts-rust-bridge-bincode/src';
+import { Serializer, Sink, Deserializer } from '../../ts-binary/src';
 import { writeMessage, writeContainer } from './generated/basic.ser.generated';
 import { readMessage, readContainer } from './generated/basic.deser.generated';
 
@@ -84,8 +84,8 @@ const genArray = <T>(f: () => T): T[] =>
 const randu8 = () => Math.floor(Math.random() * 256);
 const randf32 = () => Math.random() * 1000;
 
-const genColor = (): Color => Color.mk(randu8(), randu8(), randu8());
-const genVec3 = (): Vec3 => Vec3.mk(randf32(), randf32(), randf32());
+const genColor = (): Color => Color(randu8(), randu8(), randu8());
+const genVec3 = (): Vec3 => Vec3(randf32(), randf32(), randf32());
 
 const genFigure = (): Figure => ({
   dots: genArray(genVec3),
@@ -109,12 +109,12 @@ let sink: Sink = {
   pos: 0
 };
 
-const writeAThingToNothing = <T>(thing: T, ser: SerFunc<T>): void => {
+const writeAThingToNothing = <T>(thing: T, ser: Serializer<T>): void => {
   sink.pos = 0;
   sink = ser(sink, thing);
 };
 
-const writeAThingToSlice = <T>(thing: T, ser: SerFunc<T>): Uint8Array => {
+const writeAThingToSlice = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
   sink.pos = 0;
   sink = ser(sink, thing);
   return sink.arr.slice(0, sink.pos);
@@ -130,7 +130,7 @@ writeContainer;
 function runbench<T>(
   benchName: string,
   data: T[],
-  serFun: SerFunc<T>,
+  serFun: Serializer<T>,
   deserializer: Deserializer<T>
 ) {
   setTimeout(() => {

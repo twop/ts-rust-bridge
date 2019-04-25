@@ -1,6 +1,6 @@
 {
-  "name": "ts-rust-bridge-bincode",
-  "version": "0.3.0",
+  "name": "ts-binary",
+  "version": "0.5.0",
   "description": "A collection of helper functions to serialize data structures in typescript to rust bincode format",
   "license": "MIT",
   "repository": {

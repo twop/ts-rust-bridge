@@ -22,7 +22,7 @@ import {
   read_u8,
   Sink,
   Deserializer
-} from '../../../ts-rust-bridge-bincode/src/index';
+} from '../../../ts-binary/src/index';
 
 const readOptBool = (sink: Sink): (boolean) | undefined =>
   read_opt(sink, read_bool);
@@ -46,12 +46,10 @@ export const readMessage = (sink: Sink): Message => {
     case 0:
       return Message.Unit;
     case 1:
-      return Message.AnotherUnit;
-    case 2:
       return Message.One(read_f32(sink));
-    case 3:
+    case 2:
       return Message.Two(readOptBool(sink), read_u32(sink));
-    case 4:
+    case 3:
       return Message.VStruct(readMessage_VStruct(sink));
   }
   throw new Error('bad variant index for Message');
@@ -63,7 +61,7 @@ const readMessage_VStruct = (sink: Sink): Message_VStruct => {
   return { id, data };
 };
 
-export const readNType = (sink: Sink): NType => NType.mk(read_u32(sink));
+export const readNType = (sink: Sink): NType => NType(read_u32(sink));
 
 export const readContainer = (sink: Sink): Container => {
   switch (read_u32(sink)) {
@@ -78,7 +76,7 @@ export const readContainer = (sink: Sink): Container => {
 };
 
 export const readColor = (sink: Sink): Color =>
-  Color.mk(read_u8(sink), read_u8(sink), read_u8(sink));
+  Color(read_u8(sink), read_u8(sink), read_u8(sink));
 
 export const readFigure = (sink: Sink): Figure => {
   const dots = readVecVec3(sink);
@@ -87,7 +85,7 @@ export const readFigure = (sink: Sink): Figure => {
 };
 
 export const readVec3 = (sink: Sink): Vec3 =>
-  Vec3.mk(read_f32(sink), read_f32(sink), read_f32(sink));
+  Vec3(read_f32(sink), read_f32(sink), read_f32(sink));
 
 export const readNormalStruct = (sink: Sink): NormalStruct => {
   const a = read_u8(sink);
@@ -100,6 +98,6 @@ const EnumReverseMap: Enum[] = [Enum.ONE, Enum.TWO, Enum.THREE];
 export const readEnum = (sink: Sink): Enum => EnumReverseMap[read_u32(sink)];
 
 export const readTuple = (sink: Sink): Tuple =>
-  Tuple.mk(readOptBool(sink), readVecStr(sink));
+  Tuple(readOptBool(sink), readVecStr(sink));
 
 export const readAha: Deserializer<Aha> = readVecOptVecStr;

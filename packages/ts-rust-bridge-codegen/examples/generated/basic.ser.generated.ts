@@ -22,8 +22,8 @@ import {
   write_seq,
   write_u8,
   Sink,
-  SerFunc
-} from '../../../ts-rust-bridge-bincode/src/index';
+  Serializer
+} from '../../../ts-binary/src/index';
 
 const writeOptBool = (sink: Sink, val: (boolean) | undefined): Sink =>
   write_opt(sink, val, write_bool);
@@ -52,14 +52,12 @@ export const writeMessage = (sink: Sink, val: Message): Sink => {
   switch (val.tag) {
     case 'Unit':
       return write_u32(sink, 0);
-    case 'AnotherUnit':
-      return write_u32(sink, 1);
     case 'One':
-      return write_f32(write_u32(sink, 2), val.value);
+      return write_f32(write_u32(sink, 1), val.value);
     case 'Two':
-      return writeMessage_Two(write_u32(sink, 3), val.value);
+      return writeMessage_Two(write_u32(sink, 2), val.value);
     case 'VStruct':
-      return writeMessage_VStruct(write_u32(sink, 4), val.value);
+      return writeMessage_VStruct(write_u32(sink, 3), val.value);
   }
 };
 
@@ -71,7 +69,7 @@ const writeMessage_VStruct = (
   { id, data }: Message_VStruct
 ): Sink => write_str(write_str(sink, id), data);
 
-export const writeNType: SerFunc<NType> = write_u32;
+export const writeNType: Serializer<NType> = write_u32;
 
 export const writeContainer = (sink: Sink, val: Container): Sink => {
   switch (val.tag) {
@@ -106,4 +104,4 @@ export const writeEnum = (sink: Sink, val: Enum): Sink =>
 export const writeTuple = (sink: Sink, val: Tuple): Sink =>
   writeVecStr(writeOptBool(sink, val[0]), val[1]);
 
-export const writeAha: SerFunc<Aha> = writeVecOptVecStr;
+export const writeAha: Serializer<Aha> = writeVecOptVecStr;

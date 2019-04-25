@@ -38,11 +38,11 @@ const entryToBlocks = EntryType.match({
   ],
   Tuple: (name, fields) => [
     tupleToInterface(name, fields),
-    Module(name, [tupleToConstructor(name, fields)])
+    tupleToConstructor(name, fields)
   ],
   Newtype: (name, type) => [
     newtypeToTypeAlias(name, type),
-    Module(name, [newtypeToConstructor(name, type)])
+    newtypeToConstructor(name, type)
   ]
 });
 
@@ -79,7 +79,7 @@ const newtypeToTypeAlias = (name: string, type: Type): TsFileBlockT =>
 
 const newtypeToConstructor = (name: string, type: Type): TsFileBlockT =>
   ts.ArrowFunc({
-    name: 'mk',
+    name,
     params: [
       {
         name: 'val',
@@ -194,7 +194,7 @@ const tupleToInterface = (name: string, fields: Type[]): TsFileBlockT =>
 
 const tupleToConstructor = (name: string, fields: Type[]): TsFileBlockT =>
   ts.ArrowFunc({
-    name: 'mk',
+    name,
     params: fields.map(
       (f, i): D.Field => ({
         name: 'p' + i.toString(),
@@ -205,7 +205,7 @@ const tupleToConstructor = (name: string, fields: Type[]): TsFileBlockT =>
     returnType: name
   });
 
-const scalarToString = (scalar: Scalar): string => {
+const scalarToTypeString = (scalar: Scalar): string => {
   switch (scalar) {
     case Scalar.Bool:
       return 'boolean';
@@ -225,7 +225,7 @@ export const typeToString = (type: Type): string => {
     case TypeTag.Option:
       return `(${typeToString(type.value)}) | undefined`;
     case TypeTag.Scalar:
-      return scalarToString(type.value);
+      return scalarToTypeString(type.value);
     case TypeTag.Vec:
       return `Array<${typeToString(type.value)}>`;
     case TypeTag.RefTo:

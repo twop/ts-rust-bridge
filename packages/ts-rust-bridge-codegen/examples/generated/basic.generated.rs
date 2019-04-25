@@ -6,7 +6,6 @@ use serde::Deserialize;
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum Message {
     Unit,
-    AnotherUnit,
     One(f32),
     Two(Option<bool>, u32),
     VStruct { id: String, data: String },

@@ -30,7 +30,7 @@ ${ast2ts(
   schema2serializers({
     entries: exampleEntries,
     typesDeclarationFile: `./basic.generated`,
-    pathToBincodeLib: `../../../ts-rust-bridge-bincode/src/index`
+    pathToBincodeLib: `../../../ts-binary/src/index`
   })
 ).join('\n\n')}
 `;
@@ -40,7 +40,7 @@ ${ast2ts(
   schema2deserializers({
     entries: exampleEntries,
     typesDeclarationFile: `./basic.generated`,
-    pathToBincodeLib: `../../../ts-rust-bridge-bincode/src/index`
+    pathToBincodeLib: `../../../ts-binary/src/index`
   })
 ).join('\n\n')}
 `;

@@ -37,7 +37,7 @@ const WriteFuncs: ReadOrWrite = {
 };
 
 const serializerType = (typeStr: string) =>
-  `${BincodeLibTypes.SerFunc}<${typeStr}>`;
+  `${BincodeLibTypes.Serializer}<${typeStr}>`;
 const enumMappingName = (enumName: string) => `${enumName}Map`;
 const serFuncName = (typeName: string) => `write${typeName}`;
 
@@ -216,11 +216,11 @@ const composeTypeSerializers = (
 export const schema2serializers = ({
   entries,
   typesDeclarationFile,
-  pathToBincodeLib
+  pathToBincodeLib = 'ts-binary'
 }: {
   entries: EntryT[];
   typesDeclarationFile: string;
-  pathToBincodeLib: string;
+  pathToBincodeLib?: string;
 }): TsFileBlockT[] => {
   const pieces = entries.map(entry2SerBlocks);
 
@@ -238,7 +238,7 @@ export const schema2serializers = ({
     ts.Import({ names: unique(decl, s => s), from: typesDeclarationFile }),
     ts.Import({
       names: unique(
-        lib.concat(BincodeLibTypes.Sink, BincodeLibTypes.SerFunc),
+        lib.concat(BincodeLibTypes.Sink, BincodeLibTypes.Serializer),
         s => s
       ),
       from: pathToBincodeLib

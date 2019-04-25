@@ -3,8 +3,8 @@ export type Sink = {
   arr: Uint8Array;
 };
 
-export type SerFunc<T> = (sink: Sink, val: T) => Sink;
-export type Deserializer<T> = (mutSink: Sink) => T;
+export type Serializer<T> = (sink: Sink, val: T) => Sink;
+export type Deserializer<T> = (sink: Sink) => T;
 
 // note that all of them look at the same memory (same 4 bytes)
 const au32 = new Uint32Array(1);
@@ -45,40 +45,40 @@ const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
   return sink;
 };
 
-export const write_u8: SerFunc<number> = (sink, val) =>
+export const write_u8: Serializer<number> = (sink, val) =>
   wb(reserve(sink, 1), val);
 
-export const write_u32: SerFunc<number> = (sink, val) =>
+export const write_u32: Serializer<number> = (sink, val) =>
   wb(wb(wb(wb(reserve(sink, 4), val), val >> 8), val >> 16), val >> 24);
 
-export const write_u16: SerFunc<number> = (sink, val) =>
+export const write_u16: Serializer<number> = (sink, val) =>
   wb(wb(reserve(sink, 2), val), val >> 8);
 
-export const write_u64: SerFunc<number> = (sink, val) =>
+export const write_u64: Serializer<number> = (sink, val) =>
   write_u32(write_u32(reserve(sink, 8), val), 0);
 
-export const write_f32: SerFunc<number> = (sink, val) => {
+export const write_f32: Serializer<number> = (sink, val) => {
   af32[0] = val; // just translate the bytes from float to i32
   return write_u32(reserve(sink, 4), au32[0]);
 };
 
-export const write_str: SerFunc<string> = (sink, val) => {
+export const write_str: Serializer<string> = (sink, val) => {
   const bytes = encoder.encode(val);
   return write_bytes(write_u64(sink, bytes.length), bytes);
 };
 
-export const write_bool: SerFunc<boolean> = (sink, val) =>
+export const write_bool: Serializer<boolean> = (sink, val) =>
   write_u8(sink, val ? 1 : 0);
 
 const encoder = new TextEncoder();
 
-export const write_seq = <T>(sink: Sink, seq: T[], serEl: SerFunc<T>) =>
+export const write_seq = <T>(sink: Sink, seq: T[], serEl: Serializer<T>) =>
   seq.reduce(serEl, write_u64(sink, seq.length));
 
 export const write_opt = <T>(
   sink: Sink,
   val: T | undefined,
-  serEl: SerFunc<T>
+  serEl: Serializer<T>
 ) => (val === undefined ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val));
 
 // -------- Deserialization ----------

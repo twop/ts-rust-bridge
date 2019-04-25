@@ -17,7 +17,6 @@ const Message = Union(
   'Message',
   [
     V.Unit('Unit'),
-    V.Unit('AnotherUnit'),
     V.NewType('One', T.Scalar.F32),
     V.Tuple('Two', [T.Option(T.Scalar.Bool), T.Scalar.U32]),
     V.Struct('VStruct', { id: T.Scalar.Str, data: T.Scalar.Str })

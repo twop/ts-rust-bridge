@@ -6,7 +6,7 @@ import {
   read_u32,
   read_str,
   Sink,
-  SerFunc,
+  Serializer,
   Deserializer,
   read_u16,
   write_u16,
@@ -25,7 +25,7 @@ let sink: Sink = {
   pos: 0
 };
 
-const serialize = <T>(thing: T, ser: SerFunc<T>): Uint8Array => {
+const serialize = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
   sink.pos = 0;
   sink = ser(sink, thing);
   return sink.arr.slice(0, sink.pos);
@@ -67,7 +67,7 @@ test('it reads and writes u8', () => {
 test('it reads and writes sequence of strings', () => {
   const seq = ['abc', 'бла', 'some other str'];
 
-  const writeStrings: SerFunc<string[]> = (s, arr) =>
+  const writeStrings: Serializer<string[]> = (s, arr) =>
     write_seq(s, arr, write_str);
 
   const readStrings: Deserializer<string[]> = s => read_seq(s, read_str);
@@ -76,7 +76,7 @@ test('it reads and writes sequence of strings', () => {
 });
 
 test('it reads and writes optional string', () => {
-  const writeOptString: SerFunc<string | undefined> = (s, maybeVal) =>
+  const writeOptString: Serializer<string | undefined> = (s, maybeVal) =>
     write_opt(s, maybeVal, write_str);
 
   const readOptString: Deserializer<string | undefined> = s =>

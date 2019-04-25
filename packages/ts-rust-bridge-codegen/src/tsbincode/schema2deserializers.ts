@@ -102,7 +102,7 @@ const entry2DeserBlocks = EntryType.match({
       ts.ArrowFunc({
         name: deserializerName(name),
         returnType: name,
-        body: `${name}.mk(${deserializerNameFor(type)}(sink))`,
+        body: `${name}(${deserializerNameFor(type)}(sink))`,
         params: [{ name: 'sink', type: BincodeLibTypes.Sink }]
       })
     ]
@@ -114,12 +114,7 @@ const entry2DeserBlocks = EntryType.match({
       ...flatMap(types, t => collectRequiredImports(t, ReadFuncs))
     ],
     blocks: [
-      generateTupleDeserializer(
-        name,
-        types,
-        args => `${name}.mk(${args})`,
-        true
-      )
+      generateTupleDeserializer(name, types, args => `${name}(${args})`, true)
     ],
     typeDeserializers: flatMap(types, generateTypesDeserializers)
   }),
@@ -201,11 +196,11 @@ const entry2DeserBlocks = EntryType.match({
 export const schema2deserializers = ({
   entries,
   typesDeclarationFile,
-  pathToBincodeLib
+  pathToBincodeLib = 'ts-binary'
 }: {
   entries: EntryT[];
   typesDeclarationFile: string;
-  pathToBincodeLib: string;
+  pathToBincodeLib?: string;
 }): TsFileBlockT[] => {
   const pieces = entries.map(entry2DeserBlocks);
 

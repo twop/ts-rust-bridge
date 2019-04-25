@@ -1,6 +1,5 @@
 export type Message =
   | { tag: 'Unit' }
-  | { tag: 'AnotherUnit' }
   | { tag: 'One'; value: number }
   | { tag: 'Two'; value: Message_Two }
   | { tag: 'VStruct'; value: Message_VStruct };
@@ -19,8 +18,6 @@ export interface Message_VStruct {
 export module Message {
   export const Unit: Message = { tag: 'Unit' };
 
-  export const AnotherUnit: Message = { tag: 'AnotherUnit' };
-
   export const One = (value: number): Message => ({ tag: 'One', value });
 
   export const Two = (p0: (boolean) | undefined, p1: number): Message => ({
@@ -36,9 +33,7 @@ export module Message {
 
 export type NType = number & { type: 'NType' };
 
-export module NType {
-  export const mk = (val: number): number & { type: 'NType' } => val as any;
-}
+export const NType = (val: number): number & { type: 'NType' } => val as any;
 
 export type Container =
   | { tag: 'Units' }
@@ -66,9 +61,11 @@ export interface Color {
   length: 3;
 }
 
-export module Color {
-  export const mk = (p0: number, p1: number, p2: number): Color => [p0, p1, p2];
-}
+export const Color = (p0: number, p1: number, p2: number): Color => [
+  p0,
+  p1,
+  p2
+];
 
 export interface Figure {
   dots: Array<Vec3>;
@@ -82,9 +79,7 @@ export interface Vec3 {
   length: 3;
 }
 
-export module Vec3 {
-  export const mk = (p0: number, p1: number, p2: number): Vec3 => [p0, p1, p2];
-}
+export const Vec3 = (p0: number, p1: number, p2: number): Vec3 => [p0, p1, p2];
 
 export interface NormalStruct {
   a: number;
@@ -103,11 +98,9 @@ export interface Tuple {
   length: 2;
 }
 
-export module Tuple {
-  export const mk = (p0: (boolean) | undefined, p1: Array<string>): Tuple => [
-    p0,
-    p1
-  ];
-}
+export const Tuple = (p0: (boolean) | undefined, p1: Array<string>): Tuple => [
+  p0,
+  p1
+];
 
 export type Aha = Array<(Array<string>) | undefined>;
