@@ -36,11 +36,6 @@ test('it reads and writes NewType', () => {
   expect(serde(val, s.writeNewTypeU32, d.readNewTypeU32)).toBe(val);
 });
 
-test('it reads and writes NewType', () => {
-  const val = t.NewTypeU32(3);
-  expect(serde(val, s.writeNewTypeU32, d.readNewTypeU32)).toBe(val);
-});
-
 test('it reads and writes Alias', () => {
   const val: t.AliasToStr = 'str';
   expect(serde(val, s.writeAliasToStr, d.readAliasToStr)).toBe(val);

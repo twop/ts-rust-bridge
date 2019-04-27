@@ -23,7 +23,7 @@ The goal of the this project is to provide a toolset to build efficient communic
 Define AST(ish) structure in typescript. Note that it is a small subset of `serde` types from rust ecosystem.
 
 ```ts
-import { EntryType, T, Variant as V } from '../src/schema';
+import { EntryType, T, Variant as V } from 'ts-rust-bridge-codegen';
 
 const Message = EntryType.Union(
   'Message',
@@ -43,7 +43,7 @@ const Message = EntryType.Union(
 Then codegen typescript and rust:
 
 ```ts
-import { schema2rust, schema2ts } from '../src/index';
+import { schema2rust, schema2ts } from 'ts-rust-bridge-codegen';
 
 const tsCode = schema2ts([Message]).join('\n\n');
 const rustCode = schema2rust([Message]).join('\n\n');
@@ -291,7 +291,35 @@ console.log(
 // are equals = true, json = {"tag":"VStruct","value":{"id":"some id","data":"some data"}}
 ```
 
-Look at `examples` dir for more information how to use the library.
+Look at [examples](https://github.com/twop/ts-rust-bridge/tree/master/packages/ts-rust-bridge-codegen/examples) dir for more information how to use the library.
+
+## Simple benchmarks
+
+I just copypasted generated code from examples and tried to construct a simple benchmark.
+
+Code
+https://stackblitz.com/edit/ts-binaray-benchmark?file=index.ts
+
+Version to try
+https://ts-binaray-benchmark.stackblitz.io
+
+On complex data structure:
+
+| Method    | Serialization | Deserialization |
+| --------- | :-----------: | --------------: |
+| ts-binary |     74 ms     |           91 ms |
+| JSON      |    641 ms     |          405 ms |
+
+Simple data structure:
+
+| Method    | Serialization | Deserialization |
+| --------- | :-----------: | --------------: |
+| ts-binary |     2 ms      |            1 ms |
+| JSON      |     6 ms      |            5 ms |
+
+That was measured on latest Safari version.
+
+Note you can run the benchmark yourself cloning the repo + running npm scripts
 
 ## License
 

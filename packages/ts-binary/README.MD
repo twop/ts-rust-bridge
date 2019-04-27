@@ -134,6 +134,34 @@ const read_opt: <T>(sink: Sink, readEl: Deserializer<T>) => T | undefined;
 
 Caveat: `Option<Option<T>>` equals to just `Option<T>` in typescript, but in rust this is technically not true.
 
+## Simple benchmarks
+
+I just copypasted generated code from examples and tried to construct a simple benchmark.
+
+Code
+https://stackblitz.com/edit/ts-binaray-benchmark?file=index.ts
+
+Version to try
+https://ts-binaray-benchmark.stackblitz.io
+
+On complex data structure:
+
+| Method    | Serialization | Deserialization |
+| --------- | :-----------: | --------------: |
+| ts-binary |     74 ms     |           91 ms |
+| JSON      |    641 ms     |          405 ms |
+
+Simple data structure:
+
+| Method    | Serialization | Deserialization |
+| --------- | :-----------: | --------------: |
+| ts-binary |     2 ms      |            1 ms |
+| JSON      |     6 ms      |            5 ms |
+
+That was measured on latest Safari version.
+
+Note you can run the benchmark yourself cloning the repo + running npm scripts
+
 ## FAQ
 
 ### Why `_` in function names?
