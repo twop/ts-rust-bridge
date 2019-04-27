@@ -100,16 +100,16 @@ export module Message {
 }
 ```
 
-## What you can do
+## How to use it
 
 You can use `ts-rust-bridge-codegen` as a standalone tool. It is designed to be run manually or build time, so it should be a dev dependency.
 
 What it can do:
 
-1. Define a data structure schema that can be used to generate typescript and/or rust type definitions.
+1. Define a type schema that can be used to generate typescript and/or rust type definitions.
 2. After that you can just use JSON as a format to communicate between the two runtimes.
 
-If you want to be more efficient than JSON (it is CPU + memory intensive) you can use a binary serialization format based on: [bincode](https://github.com/TyOverby/bincode)
+If you want to be more efficient than JSON (it is CPU + memory intensive) you can use a binary serialization format compatible with [bincode](https://github.com/TyOverby/bincode)
 
 3. Generate binary type serializers/deserializers based on the schema.
 4. Profit!
