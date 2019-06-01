@@ -1,8 +1,9 @@
-import { EntryT, EntryType, T, Variant as V } from '../src/schema';
+import { EntryType, T, Variant as V } from '../src/schema';
 
 const { Alias, Enum, Tuple, Struct, Union, Newtype } = EntryType;
 
-const Bla = Alias('Aha', T.Vec(T.Option(T.Vec(T.Scalar.Str))));
+const Aha = Alias('Aha', T.Vec(T.Option(T.Vec(T.Scalar.Str))));
+const Aha2 = Alias('Aha2', T.RefTo(Aha));
 
 const MyEnum = Enum('Enum', { variants: ['ONE', 'TWO', 'THREE'] });
 
@@ -43,7 +44,7 @@ const Container = Union(
 
 const NType = Newtype('NType', T.Scalar.U32);
 
-export const exampleEntries: EntryT[] = [
+export const exampleEntries: EntryType[] = [
   Message,
   NType,
   Container,
@@ -54,7 +55,8 @@ export const exampleEntries: EntryT[] = [
   NormalStruct,
   MyEnum,
   MyTuple,
-  Bla
+  Aha2,
+  Aha
 ];
 
 // // const NewtypeAlias = Alias('NewtypeAlias', T.Option(T.Scalar.Bool));

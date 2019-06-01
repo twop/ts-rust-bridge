@@ -36,16 +36,6 @@ const wb = (sink: Sink, byte: number): Sink => {
   return sink;
 };
 
-const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
-  sink = reserve(sink, bytes.length);
-  const { arr, pos } = sink;
-  for (let i = 0; i < bytes.length; i++) {
-    arr[pos + i] = bytes[i];
-  }
-  sink.pos += bytes.length;
-  return sink;
-};
-
 export const write_u8: Serializer<number> = (sink, val) =>
   wb(reserve(sink, 1), val);
 
@@ -67,6 +57,16 @@ export const write_i32: Serializer<number> = (sink, val) => {
   return write_u32(reserve(sink, 4), au32[0]);
 };
 
+const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
+  sink = reserve(sink, bytes.length);
+  const { arr, pos } = sink;
+  arr.set(bytes, pos);
+  sink.pos += bytes.length;
+  return sink;
+};
+
+const encoder = new TextEncoder();
+
 export const write_str: Serializer<string> = (sink, val) => {
   const bytes = encoder.encode(val);
   return write_bytes(write_u64(sink, bytes.length), bytes);
@@ -75,21 +75,10 @@ export const write_str: Serializer<string> = (sink, val) => {
 export const write_bool: Serializer<boolean> = (sink, val) =>
   write_u8(sink, val ? 1 : 0);
 
-const encoder = new TextEncoder();
-
-export const write_seq_ = <T>(sink: Sink, seq: T[], serEl: Serializer<T>) =>
-  seq.reduce(serEl, write_u64(sink, seq.length));
-
 export const write_seq = <T>(serEl: Serializer<T>): Serializer<T[]> => (
   sink,
   seq: T[]
 ) => seq.reduce(serEl, write_u64(sink, seq.length));
-
-export const write_opt_ = <T>(
-  sink: Sink,
-  val: T | undefined,
-  serEl: Serializer<T>
-) => (val === undefined ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val));
 
 export const write_opt = <T>(
   serEl: Serializer<T>
@@ -142,22 +131,6 @@ export const read_i32: Deserializer<number> = sink => {
 };
 
 export const read_bool: Deserializer<boolean> = sink => rb(sink) === 1;
-
-export const read_opt_ = <T>(
-  sink: Sink,
-  readEl: Deserializer<T>
-): T | undefined => (rb(sink) === 1 ? readEl(sink) : undefined);
-
-export const read_seq_ = <T>(sink: Sink, readEl: Deserializer<T>): T[] => {
-  const count = read_u64(sink);
-  const res = new Array<T>(count);
-
-  for (let i = 0; i < count; i++) {
-    res[i] = readEl(sink);
-  }
-
-  return res;
-};
 
 export const read_opt = <T>(
   readEl: Deserializer<T>

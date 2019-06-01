@@ -1,8 +1,8 @@
-import { TsFileBlock, TsFileBlockT, D } from './ast';
+import { TsFileBlock, D } from './ast';
 import { FileBlock } from '../schema';
 import { Module, isModule } from './schema2ast';
 
-export const ast2ts = (tsBlocks: (TsFileBlockT | Module)[]): FileBlock[] =>
+export const ast2ts = (tsBlocks: (TsFileBlock | Module)[]): FileBlock[] =>
   tsBlocks.reduce(
     (blocks, tsBlock) =>
       isModule(tsBlock)

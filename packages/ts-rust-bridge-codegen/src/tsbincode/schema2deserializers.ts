@@ -1,25 +1,19 @@
-import {
-  Scalar,
-  EntryType,
-  EntryT,
-  Type,
-  TypeTag,
-  VariantT,
-  Variant
-} from '../schema';
+import { Scalar, EntryType, Type, TypeTag, Variant } from '../schema';
 
-import { TsFileBlockT, TsFileBlock as ts } from '../ts/ast';
-import { typeToString, variantPayloadTypeName } from '../ts/schema2ast';
+import { TsFileBlock, TsFileBlock as ts } from '../ts/ast';
+import { variantPayloadTypeName } from '../ts/schema2ast';
 import {
   BincodeLibTypes,
   traverseType,
   chainName,
   RequiredImport,
   flatMap,
-  unique,
   ReadOrWrite,
   collectRequiredImports,
-  enumerateStructFields
+  enumerateStructFields,
+  CodePiece,
+  TypeSerDe,
+  schema2tsBlocks
 } from './sharedPieces';
 
 const ReadFuncs: ReadOrWrite = {
@@ -37,30 +31,19 @@ const ReadFuncs: ReadOrWrite = {
 const deserializerType = (typeStr: string) =>
   `${BincodeLibTypes.Deserializer}<${typeStr}>`;
 const enumMappingArrayName = (enumName: string) => `${enumName}ReverseMap`;
-const deserializerName = (typeName: string) => `read${typeName}`;
+const deserFuncName = (typeName: string) => `read${typeName}`;
 
 const deserializerChainName = (types: Type[]): string =>
-  chainName(types, ReadFuncs, deserializerName);
+  chainName(types, ReadFuncs, deserFuncName);
 
 const deserializerNameFor = (type: Type): string =>
   deserializerChainName(traverseType(type));
 
-type TypeDeserializer = {
-  typeChain: Type[];
-  body: string;
-  toType: Type;
-};
-
 const { fromLibrary, fromTypesDeclaration } = RequiredImport;
 
-type Piece = {
-  requiredImports: RequiredImport[];
-  typeDeserializers: TypeDeserializer[];
-  blocks: TsFileBlockT[];
-};
-
 const entry2DeserBlocks = EntryType.match({
-  Enum: (name, { variants }): Piece => ({
+  Enum: (name, { variants }): CodePiece => ({
+    name,
     requiredImports: [
       fromTypesDeclaration(name),
       fromLibrary(ReadFuncs[Scalar.U32])
@@ -69,46 +52,52 @@ const entry2DeserBlocks = EntryType.match({
       genEnumIndexMapping(name, variants),
       generateEnumDeserializer(name)
     ],
-    typeDeserializers: []
+    serdes: []
   }),
-  default: (): Piece => ({
-    requiredImports: [],
-    blocks: [],
-    typeDeserializers: []
-  }),
+  // default: (): Piece => ({
 
-  Alias: (name, type): Piece => ({
+  //   requiredImports: [],
+  //   blocks: [],
+  //   typeDeserializers: []
+  // }),
+
+  Alias: (name, type): CodePiece => ({
+    name,
     requiredImports: [
       fromTypesDeclaration(name),
       ...collectRequiredImports(type, ReadFuncs)
     ],
-    typeDeserializers: generateTypesDeserializers(type),
+    serdes: generateTypesDeserializers(type),
     blocks: [
       ts.ConstVar({
-        name: deserializerName(name),
+        name: deserFuncName(name),
         type: deserializerType(name),
         expression: deserializerNameFor(type)
       })
-    ]
+    ],
+    dependsOn: [deserializerNameFor(type)]
   }),
 
-  Newtype: (name, type): Piece => ({
+  Newtype: (name, type): CodePiece => ({
+    name,
     requiredImports: [
       fromTypesDeclaration(name),
       ...collectRequiredImports(type, ReadFuncs)
     ],
-    typeDeserializers: generateTypesDeserializers(type),
+    serdes: generateTypesDeserializers(type),
     blocks: [
       ts.ArrowFunc({
-        name: deserializerName(name),
+        name: deserFuncName(name),
         returnType: name,
         body: `${name}(${deserializerNameFor(type)}(sink))`,
         params: [{ name: 'sink', type: BincodeLibTypes.Sink }]
       })
-    ]
+    ],
+    dependsOn: [deserializerNameFor(type)]
   }),
 
-  Tuple: (name, types): Piece => ({
+  Tuple: (name, types): CodePiece => ({
+    name,
     requiredImports: [
       fromTypesDeclaration(name),
       ...flatMap(types, t => collectRequiredImports(t, ReadFuncs))
@@ -116,26 +105,28 @@ const entry2DeserBlocks = EntryType.match({
     blocks: [
       generateTupleDeserializer(name, types, args => `${name}(${args})`, true)
     ],
-    typeDeserializers: flatMap(types, generateTypesDeserializers)
+    serdes: flatMap(types, generateTypesDeserializers),
+    dependsOn: types.map(deserializerNameFor)
   }),
 
-  Struct: (name, members): Piece => {
+  Struct: (name, members): CodePiece => {
     const fields = enumerateStructFields(members);
 
     return {
+      name,
       requiredImports: [
         fromTypesDeclaration(name),
         ...flatMap(fields, f => collectRequiredImports(f.type, ReadFuncs))
       ],
       blocks: [generateStructDeserializer(name, fields, true)],
-      typeDeserializers: flatMap(fields, f =>
-        generateTypesDeserializers(f.type)
-      )
+      serdes: flatMap(fields, f => generateTypesDeserializers(f.type)),
+      dependsOn: fields.map(f => deserializerNameFor(f.type))
     };
   },
 
-  Union: (unionName, variants): Piece => ({
+  Union: (unionName, variants): CodePiece => ({
     // this can be potentially sharable?
+    name: unionName,
     requiredImports: [
       fromTypesDeclaration(unionName),
       fromLibrary(ReadFuncs[Scalar.U32]),
@@ -159,7 +150,7 @@ const entry2DeserBlocks = EntryType.match({
     ],
     blocks: [
       ts.ArrowFunc({
-        name: deserializerName(unionName),
+        name: deserFuncName(unionName),
         body: genUnionDeserializers(unionName, variants, 'sink'),
         returnType: unionName,
         params: [{ name: 'sink', type: BincodeLibTypes.Sink }]
@@ -174,20 +165,30 @@ const entry2DeserBlocks = EntryType.match({
               false
             )
           ],
-          default: () => [] as TsFileBlockT[]
+          default: () => [] as TsFileBlock[]
         })
       )
     ],
-    typeDeserializers: flatMap(
+    serdes: flatMap(
       variants,
       Variant.match({
-        Unit: () => [] as TypeDeserializer[],
+        Unit: () => [] as TypeSerDe[],
         NewType: (_, type) => generateTypesDeserializers(type),
         Struct: (_, members) =>
           flatMap(enumerateStructFields(members), m =>
             generateTypesDeserializers(m.type)
           ),
         Tuple: (_, types) => flatMap(types, generateTypesDeserializers)
+      })
+    ),
+    dependsOn: flatMap(
+      variants,
+      Variant.match({
+        Unit: () => [] as string[],
+        NewType: (_, type) => [deserializerNameFor(type)],
+        Struct: (_, members) =>
+          enumerateStructFields(members).map(m => deserializerNameFor(m.type)),
+        Tuple: (_, types) => types.map(deserializerNameFor)
       })
     )
   })
@@ -196,47 +197,22 @@ const entry2DeserBlocks = EntryType.match({
 export const schema2deserializers = ({
   entries,
   typesDeclarationFile,
-  pathToBincodeLib = 'ts-binary'
+  pathToBincodeLib
 }: {
-  entries: EntryT[];
+  entries: EntryType[];
   typesDeclarationFile: string;
   pathToBincodeLib?: string;
-}): TsFileBlockT[] => {
-  const pieces = entries.map(entry2DeserBlocks);
-
-  // TODO cleanup
-  const { lib, decl } = flatMap(pieces, p => p.requiredImports).reduce(
-    ({ lib, decl }, imp) =>
-      RequiredImport.match(imp, {
-        fromTypesDeclaration: s => ({ lib, decl: decl.concat(s) }),
-        fromLibrary: s => ({ lib: lib.concat(s), decl })
-      }),
-    { lib: [] as string[], decl: [] as string[] }
-  );
-
-  return [
-    ts.Import({ names: unique(decl, s => s), from: typesDeclarationFile }),
-    ts.Import({
-      names: unique(
-        lib.concat(BincodeLibTypes.Sink, BincodeLibTypes.Deserializer),
-        s => s
-      ),
-      from: pathToBincodeLib
-    }),
-    ...unique(flatMap(pieces, p => p.typeDeserializers), s =>
-      deserializerChainName(s.typeChain)
-    ).map(({ typeChain, body, toType: fromType }) =>
-      ts.ArrowFunc({
-        name: deserializerChainName(typeChain),
-        body,
-        dontExport: true,
-        returnType: typeToString(fromType),
-        params: [{ name: 'sink', type: BincodeLibTypes.Sink }]
-      })
-    ),
-    ...flatMap(pieces, p => p.blocks)
-  ];
-};
+}): TsFileBlock[] =>
+  schema2tsBlocks({
+    pieces: entries.map(entry2DeserBlocks),
+    serdeName: deserFuncName,
+    serdeType: deserializerType,
+    serdeChainName: deserializerChainName,
+    libImports: [BincodeLibTypes.Deserializer],
+    pathToBincodeLib,
+    typesDeclarationFile,
+    readOrWrite: ReadFuncs
+  });
 
 const genEnumIndexMapping = (enumName: string, variants: string[]) =>
   ts.ConstVar({
@@ -248,7 +224,7 @@ const genEnumIndexMapping = (enumName: string, variants: string[]) =>
 
 const genUnionDeserializers = (
   unionName: string,
-  variants: VariantT[],
+  variants: Variant[],
   sinkArg: string
 ) => {
   const unionCtor = (variantName: string) => `${unionName}.${variantName}`;
@@ -259,7 +235,7 @@ const genUnionDeserializers = (
       exp: Variant.match(v, {
         Unit: unionCtor,
         Struct: name =>
-          `${unionCtor(name)}(${deserializerName(
+          `${unionCtor(name)}(${deserFuncName(
             variantPayloadTypeName(unionName, name)
           )}(${sinkArg}))`,
         NewType: (name, type) =>
@@ -279,8 +255,8 @@ const genUnionDeserializers = (
 
 const generateTypesDeserializers = (
   type: Type,
-  typeDeserializers: TypeDeserializer[] = []
-): TypeDeserializer[] => {
+  typeDeserializers: TypeSerDe[] = []
+): TypeSerDe[] => {
   switch (type.tag) {
     case TypeTag.Scalar:
     case TypeTag.RefTo:
@@ -293,18 +269,18 @@ const generateTypesDeserializers = (
         type.value,
         typeDeserializers.concat({
           typeChain: traverseType(type),
-          toType: type,
+          toOrFrom: type,
           body: `${
             type.tag === TypeTag.Option ? ReadFuncs.Opt : ReadFuncs.Seq
-          }(sink, ${deserializerChainName(traverseType(type.value))})`
+          }(${deserializerChainName(traverseType(type.value))})`
         })
       );
   }
 };
 
-const generateEnumDeserializer = (enumName: string): TsFileBlockT =>
+const generateEnumDeserializer = (enumName: string): TsFileBlock =>
   ts.ArrowFunc({
-    name: deserializerName(enumName),
+    name: deserFuncName(enumName),
     returnType: enumName,
     params: [{ name: 'sink', type: BincodeLibTypes.Sink }],
     body: `${enumMappingArrayName(enumName)}[${ReadFuncs[Scalar.U32]}(sink)]`
@@ -314,9 +290,9 @@ const generateStructDeserializer = (
   name: string,
   fields: { name: string; type: Type }[],
   shouldExport: boolean
-): TsFileBlockT =>
+): TsFileBlock =>
   ts.ArrowFunc({
-    name: deserializerName(name),
+    name: deserFuncName(name),
     wrappedInBraces: true,
     returnType: name,
     dontExport: !shouldExport || undefined,
@@ -333,9 +309,9 @@ const generateTupleDeserializer = (
   types: Type[],
   tupleCtorFunc: (argsStr: string) => string,
   shouldExport: boolean
-): TsFileBlockT =>
+): TsFileBlock =>
   ts.ArrowFunc({
-    name: deserializerName(tupleName),
+    name: deserFuncName(tupleName),
     returnType: tupleName,
     body: tupleCtorFunc(
       `${types.map(type => `${deserializerNameFor(type)}(sink)`).join(', ')}`

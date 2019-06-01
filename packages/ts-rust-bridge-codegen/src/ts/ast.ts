@@ -62,4 +62,4 @@ export const TsFileBlock = Union({
   Import: of<D.Import>()
 });
 
-export type TsFileBlockT = typeof TsFileBlock.T;
+export type TsFileBlock = typeof TsFileBlock.T;

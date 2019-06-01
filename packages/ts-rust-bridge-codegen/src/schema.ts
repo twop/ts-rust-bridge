@@ -28,7 +28,7 @@ export const EntryType = Union({
   Enum: of<string, EnumVariants>(),
   Tuple: of<string, Type[]>(),
   Newtype: of<string, Type>(),
-  Union: of<string, VariantT[], UnionOptions>()
+  Union: of<string, Variant[], UnionOptions>()
 });
 
 export const Variant = Union({
@@ -66,7 +66,7 @@ export const T = {
   Scalar: scalarsToType,
   Vec: (value: Type): Type => ({ tag: TypeTag.Vec, value }),
   Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
-  RefTo: (value: string | EntryT): Type => ({
+  RefTo: (value: string | EntryType): Type => ({
     tag: TypeTag.RefTo,
     value: typeof value === 'string' ? value : getEntryName(value)
   })
@@ -88,7 +88,7 @@ export const getVariantName = Variant.match({
   Unit: getName
 });
 
-export type EntryT = typeof EntryType.T;
-export type VariantT = typeof Variant.T;
+export type EntryType = typeof EntryType.T;
+export type Variant = typeof Variant.T;
 
 export type FileBlock = string;
