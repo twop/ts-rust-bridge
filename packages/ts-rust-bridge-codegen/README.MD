@@ -181,15 +181,14 @@ import { Message, Message_Two, Message_VStruct } from './basic.generated';
 import {
   write_u32,
   write_f32,
-  write_opt,
+  opt_writer,
   write_bool,
   write_str,
   Sink,
   Serializer
 } from 'ts-binary';
 
-const writeOptBool = (sink: Sink, val: (boolean) | undefined): Sink =>
-  write_opt(sink, val, write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
 export const writeMessage = (sink: Sink, val: Message): Sink => {
   switch (val.tag) {
@@ -221,15 +220,14 @@ import { Message, Message_VStruct } from './basic.generated';
 import {
   read_u32,
   read_f32,
-  read_opt,
+  opt_reader,
   read_bool,
   read_str,
   Sink,
   Deserializer
 } from 'ts-binary';
 
-const readOptBool = (sink: Sink): (boolean) | undefined =>
-  read_opt(sink, read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
 export const readMessage = (sink: Sink): Message => {
   switch (read_u32(sink)) {
