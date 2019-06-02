@@ -8,7 +8,7 @@ import {
 import { format } from 'prettier';
 import * as fs from 'fs';
 
-import { EntryT, EntryType, T, Variant as V } from '../src/schema';
+import { EntryType, T, Variant as V } from '../src/schema';
 
 const { Alias, Enum, Tuple, Struct, Union, Newtype } = EntryType;
 
@@ -30,7 +30,7 @@ const SimpleUnion = Union(
   { tagAnnotation: false }
 );
 
-const testTypes: EntryT[] = [
+const testTypes: EntryType[] = [
   MyTuple,
   SimpleUnion,
   JustAStruct,

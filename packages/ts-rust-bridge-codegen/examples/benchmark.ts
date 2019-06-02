@@ -43,8 +43,7 @@ const COUNT = 10000;
 
 function randomStr(length: number): string {
   var text = '';
-  var possible =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var possible = 'ываыафяДЛОАВЫЛОАВУКЦДЛСВЫФзвфыджл0123456789';
 
   for (var i = 0; i < length; i++)
     text += possible.charAt(Math.floor(Math.random() * possible.length));

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.build.json",
+
+  "compilerOptions": {
+    "baseUrl": "./packages",
+    "paths": {
+      "ts-rust-bridge-codegen": ["ts-rust-bridge-codegen/src"],
+      "ts-binary-types": ["ts-binary-types/src"],
+      "ts-binary": ["ts-binary/src"]
+    }
+  }
+}

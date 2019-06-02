@@ -9,9 +9,9 @@ import {
 } from './types';
 
 import {
-  read_opt,
+  opt_reader,
   read_bool,
-  read_seq,
+  seq_reader,
   read_str,
   read_u32,
   read_f32,
@@ -20,10 +20,9 @@ import {
   Deserializer
 } from '../../../ts-binary/src/index';
 
-const readOptBool = (sink: Sink): (boolean) | undefined =>
-  read_opt(sink, read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
-const readVecStr = (sink: Sink): Array<string> => read_seq(sink, read_str);
+const readVecStr: Deserializer<Array<string>> = seq_reader(read_str);
 
 export const readTuple = (sink: Sink): Tuple =>
   Tuple(readOptBool(sink), readVecStr(sink));

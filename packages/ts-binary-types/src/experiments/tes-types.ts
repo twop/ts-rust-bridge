@@ -10,7 +10,7 @@ import {
   U8,
   Vec,
   Option
-} from '../lib';
+} from "..";
 
 // import { Struct } from './types/struct';
 // import { Static } from './core';

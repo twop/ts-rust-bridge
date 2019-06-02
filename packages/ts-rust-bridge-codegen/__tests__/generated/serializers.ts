@@ -10,9 +10,9 @@ import {
 } from './types';
 
 import {
-  write_opt,
+  opt_writer,
   write_bool,
-  write_seq,
+  seq_writer,
   write_str,
   write_u32,
   write_f32,
@@ -21,14 +21,22 @@ import {
   Serializer
 } from '../../../ts-binary/src/index';
 
-const writeOptBool = (sink: Sink, val: (boolean) | undefined): Sink =>
-  write_opt(sink, val, write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
-const writeVecStr = (sink: Sink, val: Array<string>): Sink =>
-  write_seq(sink, val, write_str);
+const writeVecStr: Serializer<Array<string>> = seq_writer(write_str);
 
 export const writeTuple = (sink: Sink, val: Tuple): Sink =>
   writeVecStr(writeOptBool(sink, val[0]), val[1]);
+
+const writeSimpleUnion_BoolAndU32 = (
+  sink: Sink,
+  val: SimpleUnion_BoolAndU32
+): Sink => write_u32(writeOptBool(sink, val[0]), val[1]);
+
+const writeSimpleUnion_StructVariant = (
+  sink: Sink,
+  { id, tuple }: SimpleUnion_StructVariant
+): Sink => writeTuple(write_str(sink, id), tuple);
 
 export const writeSimpleUnion = (sink: Sink, val: SimpleUnion): Sink => {
   switch (val.tag) {
@@ -42,16 +50,6 @@ export const writeSimpleUnion = (sink: Sink, val: SimpleUnion): Sink => {
       return writeSimpleUnion_StructVariant(write_u32(sink, 3), val.value);
   }
 };
-
-const writeSimpleUnion_BoolAndU32 = (
-  sink: Sink,
-  val: SimpleUnion_BoolAndU32
-): Sink => write_u32(writeOptBool(sink, val[0]), val[1]);
-
-const writeSimpleUnion_StructVariant = (
-  sink: Sink,
-  { id, tuple }: SimpleUnion_StructVariant
-): Sink => writeTuple(write_str(sink, id), tuple);
 
 export const writeJustAStruct = (
   sink: Sink,

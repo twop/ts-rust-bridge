@@ -1,7 +1,7 @@
 {
-  "name": "ts-rust-bridge-codegen",
-  "version": "0.6.0",
-  "description": "A toolset to build efficient communication between rust and typescript",
+  "name": "ts-binary-types",
+  "version": "0.1.0",
+  "description": "A collection of runtype types to serialize data structures in typescript to binary format (rust bincode compatible)",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -32,14 +32,11 @@
   },
   "scripts": {
     "build": "pack build",
-    "gen:example-code": "ts-node -r esm examples/genBasic.ts",
-    "run:example": "ts-node -r esm examples/runExample.ts",
-    "gen:test-code": "ts-node -r esm __tests__/genTypesForTests.ts",
     "test": "jest",
-    "benchmark": "node -r esm -r ts-node/register examples/benchmark.ts "
+    "bench": "ts-node -r esm src/experiments/bench.ts"
   },
   "dependencies": {
-    "ts-union": "^2.1.1"
+    "ts-binary": "^0.6.0"
   },
   "devDependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.4.4",
@@ -49,15 +46,11 @@
     "@pika/plugin-build-node": "^0.4.0",
     "@pika/plugin-build-web": "^0.4.0",
     "@pika/plugin-ts-standard-pkg": "^0.4.0",
-    "@types/node": "^12.0.4",
-    "@types/prettier": "^1.16.1",
-    "ts-binary": "^0.5.0",
-    "esm": "3.1.3",
-    "prettier": "^1.17.1",
-    "ts-node": "^8.2.0",
-    "typescript": "^3.5.1",
-    "jest": "^24.8.0",
     "@types/jest": "^24.0.13",
-    "ts-jest": "^24.0.2"
+    "jest": "^24.8.0",
+    "ts-jest": "^24.0.2",
+    "esm": "3.2.17",
+    "typescript": "3.5.1",
+    "ts-node": "^8.2.0"
   }
 }

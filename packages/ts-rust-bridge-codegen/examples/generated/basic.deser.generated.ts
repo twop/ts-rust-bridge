@@ -16,26 +16,26 @@ import {
 import {
   read_u32,
   read_f32,
-  read_opt,
+  opt_reader,
   read_bool,
   read_str,
-  read_seq,
+  seq_reader,
   read_u8,
   Sink,
   Deserializer
 } from '../../../ts-binary/src/index';
 
-const readOptBool: Deserializer<(boolean) | undefined> = read_opt(read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
 export const readVec3 = (sink: Sink): Vec3 =>
   Vec3(read_f32(sink), read_f32(sink), read_f32(sink));
 
-const readVecVec3: Deserializer<Array<Vec3>> = read_seq(readVec3);
+const readVecVec3: Deserializer<Array<Vec3>> = seq_reader(readVec3);
 
 export const readColor = (sink: Sink): Color =>
   Color(read_u8(sink), read_u8(sink), read_u8(sink));
 
-const readVecColor: Deserializer<Array<Color>> = read_seq(readColor);
+const readVecColor: Deserializer<Array<Color>> = seq_reader(readColor);
 
 export const readFigure = (sink: Sink): Figure => {
   const dots = readVecVec3(sink);
@@ -43,17 +43,17 @@ export const readFigure = (sink: Sink): Figure => {
   return { dots, colors };
 };
 
-const readVecFigure: Deserializer<Array<Figure>> = read_seq(readFigure);
+const readVecFigure: Deserializer<Array<Figure>> = seq_reader(readFigure);
 
-const readVecStr: Deserializer<Array<string>> = read_seq(read_str);
+const readVecStr: Deserializer<Array<string>> = seq_reader(read_str);
 
-const readOptVecStr: Deserializer<(Array<string>) | undefined> = read_opt(
+const readOptVecStr: Deserializer<(Array<string>) | undefined> = opt_reader(
   readVecStr
 );
 
 const readVecOptVecStr: Deserializer<
   Array<(Array<string>) | undefined>
-> = read_seq(readOptVecStr);
+> = seq_reader(readOptVecStr);
 
 export const readMessage = (sink: Sink): Message => {
   switch (read_u32(sink)) {

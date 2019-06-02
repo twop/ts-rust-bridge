@@ -28,12 +28,14 @@ const WriteFuncs: ReadOrWrite = {
   [Scalar.Bool]: 'write_bool',
   [Scalar.Str]: 'write_str',
   [Scalar.F32]: 'write_f32',
+  [Scalar.F64]: 'write_f64',
   [Scalar.U8]: 'write_u8',
   [Scalar.U16]: 'write_u16',
   [Scalar.U32]: 'write_u32',
   [Scalar.USIZE]: 'write_u64',
-  Opt: 'write_opt',
-  Seq: 'write_seq'
+  [Scalar.I32]: 'write_i32',
+  Opt: 'opt_writer',
+  Seq: 'seq_writer'
 };
 
 const serializerType = (typeStr: string) =>

@@ -1,5 +1,5 @@
-import { BinType, Static, createBinType, bindesc, TypeTag } from '../core';
-import { Serializer, Sink, Deserializer } from '../..';
+import { BinType, Static, createBinType, bindesc, TypeTag } from "../core";
+import { Serializer, Sink, Deserializer } from "ts-binary";
 
 type StructDefs = { [_: string]: BinType<any> };
 
@@ -54,7 +54,7 @@ const createStructDeserializer = <O extends StructDefs>(
   const deserializers = keys.map(k => fields[k][bindesc].read);
 
   return (sink: Sink) => {
-    const rec: Partial<StructStaticType<O>> = {};
+    const rec: { [_: string]: any } = {};
 
     for (let i = 0; i < keys.length; i++) {
       rec[keys[i]] = deserializers[i](sink);

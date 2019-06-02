@@ -4,8 +4,10 @@ export enum Scalar {
   U8 = 'U8',
   U16 = 'U16',
   U32 = 'U32',
+  I32 = 'I32',
   USIZE = 'USIZE',
   F32 = 'F32',
+  F64 = 'F64',
   Str = 'Str',
   Bool = 'Bool'
 }
@@ -49,8 +51,10 @@ const scalarsToType: { [K in Scalar]: { tag: TypeTag.Scalar; value: K } } = {
   [Scalar.U8]: { tag: TypeTag.Scalar, value: Scalar.U8 },
   [Scalar.U16]: { tag: TypeTag.Scalar, value: Scalar.U16 },
   [Scalar.U32]: { tag: TypeTag.Scalar, value: Scalar.U32 },
+  [Scalar.I32]: { tag: TypeTag.Scalar, value: Scalar.I32 },
   [Scalar.USIZE]: { tag: TypeTag.Scalar, value: Scalar.USIZE },
   [Scalar.F32]: { tag: TypeTag.Scalar, value: Scalar.F32 },
+  [Scalar.F64]: { tag: TypeTag.Scalar, value: Scalar.F64 },
   [Scalar.Str]: { tag: TypeTag.Scalar, value: Scalar.Str },
   [Scalar.Bool]: { tag: TypeTag.Scalar, value: Scalar.Bool }
 };

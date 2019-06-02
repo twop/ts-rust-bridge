@@ -205,6 +205,8 @@ const scalarToTypeString = (scalar: Scalar): string => {
     case Scalar.Bool:
       return 'boolean';
     case Scalar.F32:
+    case Scalar.F64:
+    case Scalar.I32:
     case Scalar.U8:
     case Scalar.U16:
     case Scalar.U32:

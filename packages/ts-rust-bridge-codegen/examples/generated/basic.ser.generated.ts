@@ -17,41 +17,41 @@ import {
 import {
   write_u32,
   write_f32,
-  write_opt,
+  opt_writer,
   write_bool,
   write_str,
-  write_seq,
+  seq_writer,
   write_u8,
   Sink,
   Serializer
 } from '../../../ts-binary/src/index';
 
-const writeOptBool: Serializer<(boolean) | undefined> = write_opt(write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
 export const writeVec3 = (sink: Sink, val: Vec3): Sink =>
   write_f32(write_f32(write_f32(sink, val[0]), val[1]), val[2]);
 
-const writeVecVec3: Serializer<Array<Vec3>> = write_seq(writeVec3);
+const writeVecVec3: Serializer<Array<Vec3>> = seq_writer(writeVec3);
 
 export const writeColor = (sink: Sink, val: Color): Sink =>
   write_u8(write_u8(write_u8(sink, val[0]), val[1]), val[2]);
 
-const writeVecColor: Serializer<Array<Color>> = write_seq(writeColor);
+const writeVecColor: Serializer<Array<Color>> = seq_writer(writeColor);
 
 export const writeFigure = (sink: Sink, { dots, colors }: Figure): Sink =>
   writeVecColor(writeVecVec3(sink, dots), colors);
 
-const writeVecFigure: Serializer<Array<Figure>> = write_seq(writeFigure);
+const writeVecFigure: Serializer<Array<Figure>> = seq_writer(writeFigure);
 
-const writeVecStr: Serializer<Array<string>> = write_seq(write_str);
+const writeVecStr: Serializer<Array<string>> = seq_writer(write_str);
 
-const writeOptVecStr: Serializer<(Array<string>) | undefined> = write_opt(
+const writeOptVecStr: Serializer<(Array<string>) | undefined> = opt_writer(
   writeVecStr
 );
 
 const writeVecOptVecStr: Serializer<
   Array<(Array<string>) | undefined>
-> = write_seq(writeOptVecStr);
+> = seq_writer(writeOptVecStr);
 
 const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>
   write_u32(writeOptBool(sink, val[0]), val[1]);

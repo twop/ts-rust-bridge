@@ -1,5 +1,5 @@
-import { BinType, Static, bindesc, createBinType, TypeTag } from '../core';
-import { read_seq, write_seq } from '../..';
+import { BinType, Static, bindesc, createBinType, TypeTag } from "../core";
+import { seq_reader, seq_writer } from "ts-binary";
 
 export interface Vec<T extends BinType<string>>
   extends BinType<TypeTag.Vec, Static<T>[], { type: T }> {}
@@ -7,8 +7,8 @@ export interface Vec<T extends BinType<string>>
 export const Vec = <T extends BinType<string>>(type: T) => {
   const { read, write } = type[bindesc];
   return createBinType<Vec<T>>(
-    read_seq(read),
-    write_seq(write),
+    seq_reader(read),
+    seq_writer(write),
     TypeTag.Vec,
     { type },
     {}

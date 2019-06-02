@@ -1,7 +1,7 @@
-import { Message, Container, Figure, Color, Vec3 } from './tes-types';
-import { Serializer, Sink, Deserializer } from '../../index';
-import { bindesc } from '../core';
-import { bintypeToBinAst, binAst2bintype } from './traverse';
+import { Message, Container, Figure, Color, Vec3 } from "./tes-types";
+import { Serializer, Sink, Deserializer } from "ts-binary";
+import { bindesc } from "../core";
+import { bintypeToBinAst, binAst2bintype } from "./traverse";
 // import { writeMessage, writeContainer } from "./ser";
 // import { readMessage, readContainer } from "./deser";
 
@@ -44,8 +44,8 @@ const bench = () => {
   const COUNT = 1000;
 
   function randomStr(length: number): string {
-    var text = '';
-    var possible = 'выфвпаывпцукждслчмДЛОДЛТДЛОЖЖЩШЛДЙТЦУЗЧЖСДЛ12389050-5435';
+    var text = "";
+    var possible = "выфвпаывпцукждслчмДЛОДЛТДЛОЖЖЩШЛДЙТЦУЗЧЖСДЛ12389050-5435";
     // 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
     for (var i = 0; i < length; i++)
@@ -126,27 +126,27 @@ const bench = () => {
     serFun: Serializer<T>,
     deserializer: Deserializer<T>
   ) {
-    const strings = Array.from({ length: COUNT }, () => '');
+    const strings = Array.from({ length: COUNT }, () => "");
 
-    log('                      ');
+    log("                      ");
     log(benchName.toUpperCase());
-    log('----Serialization----');
-    measure('bincode', () => {
+    log("----Serialization----");
+    measure("bincode", () => {
       data.forEach(d => writeAThingToNothing(d, serFun));
     });
     // measure("bincode + allocating a new buf", () => {
     //   data.forEach(d => writeAThingToSlice(d, serFun));
     // });
-    measure('json', () => {
+    measure("json", () => {
       data.forEach((d, i) => (strings[i] = JSON.stringify(d)));
     });
-    log('----Deserialization----');
+    log("----Deserialization----");
 
     const buffers = data.map(d => writeAThingToSlice(d, serFun));
 
     const res = [...data]; // just a copy
 
-    measure('D: bincode', () => {
+    measure("D: bincode", () => {
       buffers.forEach((b, i) => (res[i] = deserializer({ arr: b, pos: 0 })));
     });
 
@@ -159,7 +159,7 @@ const bench = () => {
     //   }
     // });
 
-    measure('D: json', () => {
+    measure("D: json", () => {
       strings.forEach((s, i) => (res[i] = JSON.parse(s)));
     });
   }
@@ -171,7 +171,7 @@ const bench = () => {
   //   Container[runtype].write,
   //   Container[runtype].read
   // );
-  runbench('simple', messages, Message[bindesc].write, Message[bindesc].read);
+  runbench("simple", messages, Message[bindesc].write, Message[bindesc].read);
 };
 
 export const runBench = (): string[] => {
@@ -190,7 +190,7 @@ console.log(bintypeToBinAst(Container));
 const messageAst = bintypeToBinAst(Message);
 const messageRestoredBintype = binAst2bintype(messageAst);
 
-const msg = Message.VStruct({ id: 'id', data: 'агф1!' });
+const msg = Message.VStruct({ id: "id", data: "агф1!" });
 
 const serialize = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
   let sink: Sink = {

@@ -1,11 +1,13 @@
-import { Static } from '../core';
-import { U8, F32 } from '../types/numbers';
-import { Tuple } from '../types/tuple';
-import { Struct } from '../types/struct';
-import { Enum } from '../types/enum';
-import { Union } from '../types/union';
-import { U32 } from '../types/numbers';
-import { retype } from '../retype';
+import { Static } from "../core";
+import { U8, F32 } from "../types/numbers";
+import { Tuple } from "../types/tuple";
+import { Struct } from "../types/struct";
+import { Enum } from "../types/enum";
+import { Union } from "../types/union";
+import { U32 } from "../types/numbers";
+import { retype } from "../retype";
+// import { Bool } from '../types/bool';
+// import { Str } from '../types/str';
 // import { Bool } from './bool';
 
 const Color_ = Tuple(U8, U8, U8);
@@ -24,7 +26,7 @@ const S_ = Struct({
 export interface S extends Static<typeof S_> {}
 export const S = retype(S_).as<S>();
 
-const E = Enum('A', 'B', 'C');
+const E = Enum("A", "B", "C");
 E;
 
 type E = Static<typeof E>;

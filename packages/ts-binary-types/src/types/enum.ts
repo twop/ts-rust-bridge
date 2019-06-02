@@ -1,5 +1,5 @@
-import { Sink, read_u32, Serializer, write_u32 } from '../..';
-import { BinType, createBinType, TypeTag } from '../core';
+import { Sink, read_u32, Serializer, write_u32 } from "ts-binary";
+import { BinType, createBinType, TypeTag } from "../core";
 
 type Variants<V extends string[]> = { [K in V[number]]: K };
 

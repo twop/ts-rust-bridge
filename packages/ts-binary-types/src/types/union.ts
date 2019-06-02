@@ -1,5 +1,5 @@
-import { Static, BinType, createBinType, bindesc, TypeTag } from '../core';
-import { Serializer, write_u32, Sink, Deserializer, read_u32 } from '../..';
+import { Static, BinType, createBinType, bindesc, TypeTag } from "../core";
+import { Serializer, write_u32, Sink, Deserializer, read_u32 } from "ts-binary";
 // import { Tuple2, Tuple3 } from './tuple';
 
 // type VariantDef = Runtype<any> | null | Inline<any>;

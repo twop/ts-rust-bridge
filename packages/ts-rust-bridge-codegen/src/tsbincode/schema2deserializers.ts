@@ -20,12 +20,14 @@ const ReadFuncs: ReadOrWrite = {
   [Scalar.Bool]: 'read_bool',
   [Scalar.Str]: 'read_str',
   [Scalar.F32]: 'read_f32',
+  [Scalar.F64]: 'read_f64',
+  [Scalar.I32]: 'read_i32',
   [Scalar.U8]: 'read_u8',
   [Scalar.U16]: 'read_u16',
   [Scalar.U32]: 'read_u32',
   [Scalar.USIZE]: 'read_u64',
-  Opt: 'read_opt',
-  Seq: 'read_seq'
+  Opt: 'opt_reader',
+  Seq: 'seq_reader'
 };
 
 const deserializerType = (typeStr: string) =>

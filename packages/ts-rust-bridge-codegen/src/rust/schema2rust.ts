@@ -92,6 +92,8 @@ const scalarToString = (scalar: Scalar): string => {
       return 'bool';
     case Scalar.F32:
       return 'f32';
+    case Scalar.F64:
+      return 'f54';
     case Scalar.U8:
       return 'u8';
     case Scalar.U16:
@@ -100,6 +102,8 @@ const scalarToString = (scalar: Scalar): string => {
       return 'u32';
     case Scalar.USIZE:
       return 'usize';
+    case Scalar.I32:
+      return 'i32';
     case Scalar.Str:
       return 'String';
   }
