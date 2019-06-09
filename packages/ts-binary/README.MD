@@ -67,11 +67,9 @@ And because these are just types/conventions it is easy to support custom types.
 
 ### Supported primitives
 
-At the moment only a small set of types are supported:
+At the moment only the list of supported types:
 
-`u8, u16, u32, u64, f32, string, boolean, Option<T>, Sequence<T>`.
-
-i32, i16, i8 are coming.
+`u8, u16, u32, u64, i32, f32, f64, string, boolean, Option<T>, Sequence<T>`.
 
 Caveat: u64 is serialized as 8 bytes but only 4 bytes are actually being used. Which means that technically only u32 values are supported (but nothing stops you from implementing that yourself :) ).
 
@@ -83,12 +81,16 @@ const write_u16: Serializer<number>;
 const write_u32: Serializer<number>;
 const write_u64: Serializer<number>;
 const write_f32: Serializer<number>;
+const write_f64: Serializer<number>;
+const write_i32: Serializer<number>;
 
 const read_u8: Deserializer<number>;
 const read_u16: Deserializer<number>;
 const read_u32: Deserializer<number>;
 const read_u64: Deserializer<number>;
 const read_f32: Deserializer<number>;
+const read_f64: Deserializer<number>;
+const read_i32: Deserializer<number>;
 ```
 
 ### Strings
@@ -111,11 +113,11 @@ const read_bool: Deserializer<boolean>;
 
 ### Sequence
 
-Works with normal arrays of a single type T. Requires serializer/deserializer of type T. Encodes a sequence as u64 + serialized elements.
+You can make new serializer and deserializer for `T[]` out of serializer/deserializer of type `T`. It encodes a sequence as u64 + serialized elements.
 
 ```ts
-const write_seq: <T>(sink: Sink, seq: T[], serEl: Serializer<T>) => Sink;
-const read_seq: <T>(sink: Sink, readEl: Deserializer<T>) => T[];
+const seq_writer: <T>(serEl: Serializer<T>) => Serializer<T[]>;
+const seq_reader: <T>(readEl: Deserializer<T>) => Deserializer<T[]>;
 ```
 
 ### Optional
@@ -123,13 +125,9 @@ const read_seq: <T>(sink: Sink, readEl: Deserializer<T>) => T[];
 Optionals are described as `T | undefined` (but not `null`). Encoded as 1 (one byte) followed up by a serialized value T if !== undefined or just 0 (one byte).
 
 ```ts
-const write_opt: <T>(
-  sink: Sink,
-  val: T | undefined,
-  serEl: Serializer<T>
-) => Sink;
-
-const read_opt: <T>(sink: Sink, readEl: Deserializer<T>) => T | undefined;
+// similar to sequence they produce new serializer/deserializer
+const opt_writer: <T>(serEl: Serializer<T>) => Serializer<T | undefined>;
+const opt_reader: <T>(readEl: Deserializer<T>) => Deserializer<T | undefined>;
 ```
 
 Caveat: `Option<Option<T>>` equals to just `Option<T>` in typescript, but in rust this is technically not true.

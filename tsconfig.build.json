@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "removeComments": false,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "declaration": true,
+    "strictNullChecks": true,
+    "strict": true
+  },
+  "exclude": ["node_modules", "__tests__", "**/__tests__", "src/__tests__"]
+}

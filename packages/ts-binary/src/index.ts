@@ -7,10 +7,12 @@ export type Serializer<T> = (sink: Sink, val: T) => Sink;
 export type Deserializer<T> = (sink: Sink) => T;
 
 // note that all of them look at the same memory (same 4 bytes)
-const au32 = new Uint32Array(1);
+const au32 = new Uint32Array(2);
 const au16 = new Uint16Array(au32.buffer);
 const au8 = new Uint8Array(au32.buffer);
 const af32 = new Float32Array(au32.buffer);
+const af64 = new Float64Array(au32.buffer);
+const ai32 = new Int32Array(au32.buffer);
 
 const reserve = (sink: Sink, numberOfBytes: number): Sink => {
   const { arr, pos } = sink;
@@ -35,16 +37,6 @@ const wb = (sink: Sink, byte: number): Sink => {
   return sink;
 };
 
-const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
-  sink = reserve(sink, bytes.length);
-  const { arr, pos } = sink;
-  for (let i = 0; i < bytes.length; i++) {
-    arr[pos + i] = bytes[i];
-  }
-  sink.pos += bytes.length;
-  return sink;
-};
-
 export const write_u8: Serializer<number> = (sink, val) =>
   wb(reserve(sink, 1), val);
 
@@ -58,9 +50,29 @@ export const write_u64: Serializer<number> = (sink, val) =>
   write_u32(write_u32(reserve(sink, 8), val), 0);
 
 export const write_f32: Serializer<number> = (sink, val) => {
-  af32[0] = val; // just translate the bytes from float to i32
+  af32[0] = val; // just translate the bytes from float to u32
   return write_u32(reserve(sink, 4), au32[0]);
 };
+
+export const write_f64: Serializer<number> = (sink, val) => {
+  af64[0] = val; // just translate the bytes from float64 to u32
+  return write_u32(write_u32(reserve(sink, 8), au32[0]), au32[1]);
+};
+
+export const write_i32: Serializer<number> = (sink, val) => {
+  ai32[0] = val; // just translate the bytes from i32 to u32
+  return write_u32(reserve(sink, 4), au32[0]);
+};
+
+const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
+  sink = reserve(sink, bytes.length);
+  const { arr, pos } = sink;
+  arr.set(bytes, pos);
+  sink.pos += bytes.length;
+  return sink;
+};
+
+const encoder = new TextEncoder();
 
 export const write_str: Serializer<string> = (sink, val) => {
   const bytes = encoder.encode(val);
@@ -70,16 +82,15 @@ export const write_str: Serializer<string> = (sink, val) => {
 export const write_bool: Serializer<boolean> = (sink, val) =>
   write_u8(sink, val ? 1 : 0);
 
-const encoder = new TextEncoder();
+export const seq_writer = <T>(serEl: Serializer<T>): Serializer<T[]> => (
+  sink,
+  seq: T[]
+) => seq.reduce(serEl, write_u64(sink, seq.length));
 
-export const write_seq = <T>(sink: Sink, seq: T[], serEl: Serializer<T>) =>
-  seq.reduce(serEl, write_u64(sink, seq.length));
-
-export const write_opt = <T>(
-  sink: Sink,
-  val: T | undefined,
+export const opt_writer = <T>(
   serEl: Serializer<T>
-) => (val === undefined ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val));
+): Serializer<T | undefined> => (sink: Sink, val: T | undefined) =>
+  val === undefined ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val);
 
 // -------- Deserialization ----------
 
@@ -95,14 +106,12 @@ export const read_u32: Deserializer<number> = sink => {
   au8[3] = rb(sink);
   return au32[0];
 };
-// wb(wb(wb(wb(reserve(sink, 4), val), val >> 8), val >> 16), val >> 24);
 
 export const read_u16: Deserializer<number> = sink => {
   au8[0] = rb(sink);
   au8[1] = rb(sink);
   return au16[0];
 };
-// wb(wb(reserve(sink, 2), val), val >> 8);
 
 export const read_u64: Deserializer<number> = sink => {
   // we dont support numbers more than u32 (yet)
@@ -120,14 +129,29 @@ export const read_f32: Deserializer<number> = sink => {
   return af32[0];
 };
 
+export const read_f64: Deserializer<number> = sink => {
+  for (let i = 0; i < 8; i++) au8[i] = rb(sink);
+  return af64[0];
+};
+
+export const read_i32: Deserializer<number> = sink => {
+  au8[0] = rb(sink);
+  au8[1] = rb(sink);
+  au8[2] = rb(sink);
+  au8[3] = rb(sink);
+  return ai32[0];
+};
+
 export const read_bool: Deserializer<boolean> = sink => rb(sink) === 1;
 
-export const read_opt = <T>(
-  sink: Sink,
+export const opt_reader = <T>(
   readEl: Deserializer<T>
-): T | undefined => (rb(sink) === 1 ? readEl(sink) : undefined);
+): Deserializer<T | undefined> => sink =>
+  rb(sink) === 1 ? readEl(sink) : undefined;
 
-export const read_seq = <T>(sink: Sink, readEl: Deserializer<T>): T[] => {
+export const seq_reader = <T>(
+  readEl: Deserializer<T>
+): Deserializer<T[]> => sink => {
   const count = read_u64(sink);
   const res = new Array<T>(count);
 

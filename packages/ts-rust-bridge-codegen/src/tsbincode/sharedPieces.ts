@@ -1,5 +1,8 @@
 import { TypeTag, Type, Scalar, StructMembers } from '../schema';
 import { Union, of } from 'ts-union';
+import { TsFileBlock, TsFileBlock as ts } from '../ts/ast';
+import { findOrder } from './topologicalSort';
+import { typeToString } from '../ts/schema2ast';
 
 export const enum BincodeLibTypes {
   Sink = 'Sink',
@@ -108,4 +111,144 @@ export const collectRequiredImports = (
         ...collectRequiredImports(type.value, readOrWrite)
       );
   }
+};
+
+export type TypeSerDe = {
+  typeChain: Type[];
+  body: string;
+  toOrFrom: Type;
+};
+
+export type CodePiece = {
+  requiredImports: RequiredImport[];
+  serdes: TypeSerDe[];
+  blocks: TsFileBlock[];
+  dependsOn?: string[];
+  name: string;
+};
+
+type PieceToSort = {
+  dependsOn: string[];
+  blocks: TsFileBlock[];
+  id: string;
+};
+
+const sortPiecesByDependencies = (
+  pieces: PieceToSort[],
+  readOrWrite: ReadOrWrite
+): PieceToSort[] => {
+  const allFuncNames = pieces.map(p => p.id);
+
+  const primitive = new Set(Object.values(readOrWrite));
+
+  // console.log({ primitiveSerializers });
+
+  const dependencyEdges = flatMap(pieces, p =>
+    p.dependsOn
+      .filter(dep => !primitive.has(dep))
+      .map((dep): [string, string] => [p.id, dep])
+  );
+
+  const sorted = findOrder(allFuncNames, dependencyEdges);
+
+  console.log({ sorted });
+
+  return sorted.map(i => pieces.find(p => p.id === i)!);
+};
+
+export const schema2tsBlocks = ({
+  serdeName,
+  serdeType,
+  serdeChainName,
+  readOrWrite,
+  pieces,
+  typesDeclarationFile,
+  libImports,
+  pathToBincodeLib = 'ts-binary'
+}: {
+  serdeName: (_: string) => string;
+  serdeType: (_: string) => string;
+  serdeChainName: (_: Type[]) => string;
+  readOrWrite: ReadOrWrite;
+  pieces: CodePiece[];
+  typesDeclarationFile: string;
+  pathToBincodeLib?: string;
+  libImports: string[];
+}): TsFileBlock[] => {
+  // const pieces = entries.map(entry2SerPiece);
+
+  // TODO cleanup
+  const { lib, decl } = flatMap(pieces, p => p.requiredImports).reduce(
+    ({ lib, decl }, imp) =>
+      RequiredImport.match(imp, {
+        fromTypesDeclaration: s => ({ lib, decl: decl.concat(s) }),
+        fromLibrary: s => ({ lib: lib.concat(s), decl })
+      }),
+    { lib: [] as string[], decl: [] as string[] }
+  );
+
+  const typeSerdesToSort: PieceToSort[] = unique(
+    flatMap(pieces, p => p.serdes),
+    s => serdeChainName(s.typeChain)
+  ).map(({ typeChain, body, toOrFrom: fromType }) => {
+    const name = serdeChainName(typeChain);
+    const sourceTypeAsString = typeToString(fromType);
+
+    const dependsOnTypes = typeChain.slice(1);
+    const dependsOn =
+      dependsOnTypes.length > 0 ? [serdeChainName(dependsOnTypes)] : [];
+
+    return {
+      id: name,
+      dependsOn,
+
+      blocks: [
+        ts.ConstVar({
+          name,
+          expression: `${body}`,
+          dontExport: true,
+          type: serdeType(sourceTypeAsString)
+        })
+      ]
+    };
+  });
+
+  const codePiecesToSort: PieceToSort[] = pieces.map(
+    ({ blocks, dependsOn = [], name }): PieceToSort => ({
+      blocks,
+      dependsOn,
+      id: serdeName(name)
+    })
+  );
+
+  // console.log(
+  //   'typeSerializersToSort',
+  //   // JSON.stringify(
+  //   typeSerializersToSort.map(({ dependsOn, id }) => ({ id, dependsOn }))
+  //   // )
+  // );
+  // console.log(
+  //   'piecesToSort',
+  //   piecesToSort.map(({ dependsOn, id }) => ({ id, dependsOn }))
+  // );
+  // // console.log(JSON.stringify(piecesToSort));
+
+  return [
+    ts.Import({ names: unique(decl, s => s), from: typesDeclarationFile }),
+    ts.Import({
+      names: unique(
+        lib.concat(BincodeLibTypes.Sink).concat(libImports),
+        s => s
+      ),
+      from: pathToBincodeLib
+    }),
+
+    ...flatMap(
+      sortPiecesByDependencies(
+        typeSerdesToSort.concat(codePiecesToSort),
+        readOrWrite
+      ),
+      p => p.blocks
+    )
+  ];
 };

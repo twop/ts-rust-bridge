@@ -9,37 +9,51 @@ import {
   NormalStruct,
   Tuple,
   Enum,
+  Aha2,
   Aha
 } from './basic.generated';
 
 import {
   read_u32,
   read_f32,
-  read_opt,
+  opt_reader,
   read_bool,
   read_str,
-  read_seq,
+  seq_reader,
   read_u8,
   Sink,
   Deserializer
 } from '../../../ts-binary/src/index';
 
-const readOptBool = (sink: Sink): (boolean) | undefined =>
-  read_opt(sink, read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
-const readVecFigure = (sink: Sink): Array<Figure> => read_seq(sink, readFigure);
+export const readVec3 = (sink: Sink): Vec3 =>
+  Vec3(read_f32(sink), read_f32(sink), read_f32(sink));
 
-const readVecVec3 = (sink: Sink): Array<Vec3> => read_seq(sink, readVec3);
+const readVecVec3: Deserializer<Array<Vec3>> = seq_reader(readVec3);
 
-const readVecColor = (sink: Sink): Array<Color> => read_seq(sink, readColor);
+export const readColor = (sink: Sink): Color =>
+  Color(read_u8(sink), read_u8(sink), read_u8(sink));
 
-const readVecStr = (sink: Sink): Array<string> => read_seq(sink, read_str);
+const readVecColor: Deserializer<Array<Color>> = seq_reader(readColor);
 
-const readVecOptVecStr = (sink: Sink): Array<(Array<string>) | undefined> =>
-  read_seq(sink, readOptVecStr);
+export const readFigure = (sink: Sink): Figure => {
+  const dots = readVecVec3(sink);
+  const colors = readVecColor(sink);
+  return { dots, colors };
+};
 
-const readOptVecStr = (sink: Sink): (Array<string>) | undefined =>
-  read_opt(sink, readVecStr);
+const readVecFigure: Deserializer<Array<Figure>> = seq_reader(readFigure);
+
+const readVecStr: Deserializer<Array<string>> = seq_reader(read_str);
+
+const readOptVecStr: Deserializer<(Array<string>) | undefined> = opt_reader(
+  readVecStr
+);
+
+const readVecOptVecStr: Deserializer<
+  Array<(Array<string>) | undefined>
+> = seq_reader(readOptVecStr);
 
 export const readMessage = (sink: Sink): Message => {
   switch (read_u32(sink)) {
@@ -75,17 +89,8 @@ export const readContainer = (sink: Sink): Container => {
   throw new Error('bad variant index for Container');
 };
 
-export const readColor = (sink: Sink): Color =>
-  Color(read_u8(sink), read_u8(sink), read_u8(sink));
-
-export const readFigure = (sink: Sink): Figure => {
-  const dots = readVecVec3(sink);
-  const colors = readVecColor(sink);
-  return { dots, colors };
-};
-
-export const readVec3 = (sink: Sink): Vec3 =>
-  Vec3(read_f32(sink), read_f32(sink), read_f32(sink));
+export const readTuple = (sink: Sink): Tuple =>
+  Tuple(readOptBool(sink), readVecStr(sink));
 
 export const readNormalStruct = (sink: Sink): NormalStruct => {
   const a = read_u8(sink);
@@ -97,7 +102,6 @@ const EnumReverseMap: Enum[] = [Enum.ONE, Enum.TWO, Enum.THREE];
 
 export const readEnum = (sink: Sink): Enum => EnumReverseMap[read_u32(sink)];
 
-export const readTuple = (sink: Sink): Tuple =>
-  Tuple(readOptBool(sink), readVecStr(sink));
-
 export const readAha: Deserializer<Aha> = readVecOptVecStr;
+
+export const readAha2: Deserializer<Aha2> = readAha;

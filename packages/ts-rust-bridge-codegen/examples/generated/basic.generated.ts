@@ -103,4 +103,6 @@ export const Tuple = (p0: (boolean) | undefined, p1: Array<string>): Tuple => [
   p1
 ];
 
+export type Aha2 = Aha;
+
 export type Aha = Array<(Array<string>) | undefined>;

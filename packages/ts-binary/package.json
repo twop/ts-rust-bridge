@@ -1,7 +1,10 @@
 {
   "name": "ts-binary",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A collection of helper functions to serialize data structures in typescript to rust bincode format",
+  "types": "pkg/dist-types/index.d.ts",
+  "main": "pkg/dist-node/index.js",
+  "module": "pkg/dist-web/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,6 +18,7 @@
       [
         "@pika/plugin-ts-standard-pkg",
         {
+          "tsconfig": "./tsconfig.build.json",
           "exclude": [
             "__tests__/**/*.*",
             "examples/**/*.*"
@@ -45,6 +49,7 @@
     "@types/jest": "^24.0.11",
     "jest": "^24.7.1",
     "ts-jest": "^24.0.2",
-    "typescript": "3.3.3"
+    "esm": "3.2.17",
+    "typescript": "3.5.1"
   }
 }

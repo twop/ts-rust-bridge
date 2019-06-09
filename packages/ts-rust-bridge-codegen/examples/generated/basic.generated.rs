@@ -58,5 +58,8 @@ pub enum Enum {
 pub struct Tuple(pub Option<bool>, pub Vec<String>);
 
 
+pub type Aha2 = Aha;
+
+
 pub type Aha = Vec<Option<Vec<String>>>;
 

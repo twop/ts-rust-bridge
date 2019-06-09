@@ -10,43 +10,56 @@ import {
   NormalStruct,
   Tuple,
   Enum,
+  Aha2,
   Aha
 } from './basic.generated';
 
 import {
   write_u32,
   write_f32,
-  write_opt,
+  opt_writer,
   write_bool,
   write_str,
-  write_seq,
+  seq_writer,
   write_u8,
   Sink,
   Serializer
 } from '../../../ts-binary/src/index';
 
-const writeOptBool = (sink: Sink, val: (boolean) | undefined): Sink =>
-  write_opt(sink, val, write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
-const writeVecFigure = (sink: Sink, val: Array<Figure>): Sink =>
-  write_seq(sink, val, writeFigure);
+export const writeVec3 = (sink: Sink, val: Vec3): Sink =>
+  write_f32(write_f32(write_f32(sink, val[0]), val[1]), val[2]);
 
-const writeVecVec3 = (sink: Sink, val: Array<Vec3>): Sink =>
-  write_seq(sink, val, writeVec3);
+const writeVecVec3: Serializer<Array<Vec3>> = seq_writer(writeVec3);
 
-const writeVecColor = (sink: Sink, val: Array<Color>): Sink =>
-  write_seq(sink, val, writeColor);
+export const writeColor = (sink: Sink, val: Color): Sink =>
+  write_u8(write_u8(write_u8(sink, val[0]), val[1]), val[2]);
 
-const writeVecStr = (sink: Sink, val: Array<string>): Sink =>
-  write_seq(sink, val, write_str);
+const writeVecColor: Serializer<Array<Color>> = seq_writer(writeColor);
 
-const writeVecOptVecStr = (
+export const writeFigure = (sink: Sink, { dots, colors }: Figure): Sink =>
+  writeVecColor(writeVecVec3(sink, dots), colors);
+
+const writeVecFigure: Serializer<Array<Figure>> = seq_writer(writeFigure);
+
+const writeVecStr: Serializer<Array<string>> = seq_writer(write_str);
+
+const writeOptVecStr: Serializer<(Array<string>) | undefined> = opt_writer(
+  writeVecStr
+);
+
+const writeVecOptVecStr: Serializer<
+  Array<(Array<string>) | undefined>
+> = seq_writer(writeOptVecStr);
+
+const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>
+  write_u32(writeOptBool(sink, val[0]), val[1]);
+
+const writeMessage_VStruct = (
   sink: Sink,
-  val: Array<(Array<string>) | undefined>
-): Sink => write_seq(sink, val, writeOptVecStr);
-
-const writeOptVecStr = (sink: Sink, val: (Array<string>) | undefined): Sink =>
-  write_opt(sink, val, writeVecStr);
+  { id, data }: Message_VStruct
+): Sink => write_str(write_str(sink, id), data);
 
 export const writeMessage = (sink: Sink, val: Message): Sink => {
   switch (val.tag) {
@@ -61,14 +74,6 @@ export const writeMessage = (sink: Sink, val: Message): Sink => {
   }
 };
 
-const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>
-  write_u32(writeOptBool(sink, val[0]), val[1]);
-
-const writeMessage_VStruct = (
-  sink: Sink,
-  { id, data }: Message_VStruct
-): Sink => write_str(write_str(sink, id), data);
-
 export const writeNType: Serializer<NType> = write_u32;
 
 export const writeContainer = (sink: Sink, val: Container): Sink => {
@@ -82,14 +87,8 @@ export const writeContainer = (sink: Sink, val: Container): Sink => {
   }
 };
 
-export const writeColor = (sink: Sink, val: Color): Sink =>
-  write_u8(write_u8(write_u8(sink, val[0]), val[1]), val[2]);
-
-export const writeFigure = (sink: Sink, { dots, colors }: Figure): Sink =>
-  writeVecColor(writeVecVec3(sink, dots), colors);
-
-export const writeVec3 = (sink: Sink, val: Vec3): Sink =>
-  write_f32(write_f32(write_f32(sink, val[0]), val[1]), val[2]);
+export const writeTuple = (sink: Sink, val: Tuple): Sink =>
+  writeVecStr(writeOptBool(sink, val[0]), val[1]);
 
 export const writeNormalStruct = (
   sink: Sink,
@@ -101,7 +100,6 @@ const EnumMap: { [key: string]: number } = { ONE: 0, TWO: 1, THREE: 2 };
 export const writeEnum = (sink: Sink, val: Enum): Sink =>
   write_u32(sink, EnumMap[val]);
 
-export const writeTuple = (sink: Sink, val: Tuple): Sink =>
-  writeVecStr(writeOptBool(sink, val[0]), val[1]);
-
 export const writeAha: Serializer<Aha> = writeVecOptVecStr;
+
+export const writeAha2: Serializer<Aha2> = writeAha;

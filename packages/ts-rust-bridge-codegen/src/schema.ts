@@ -4,8 +4,10 @@ export enum Scalar {
   U8 = 'U8',
   U16 = 'U16',
   U32 = 'U32',
+  I32 = 'I32',
   USIZE = 'USIZE',
   F32 = 'F32',
+  F64 = 'F64',
   Str = 'Str',
   Bool = 'Bool'
 }
@@ -28,7 +30,7 @@ export const EntryType = Union({
   Enum: of<string, EnumVariants>(),
   Tuple: of<string, Type[]>(),
   Newtype: of<string, Type>(),
-  Union: of<string, VariantT[], UnionOptions>()
+  Union: of<string, Variant[], UnionOptions>()
 });
 
 export const Variant = Union({
@@ -49,8 +51,10 @@ const scalarsToType: { [K in Scalar]: { tag: TypeTag.Scalar; value: K } } = {
   [Scalar.U8]: { tag: TypeTag.Scalar, value: Scalar.U8 },
   [Scalar.U16]: { tag: TypeTag.Scalar, value: Scalar.U16 },
   [Scalar.U32]: { tag: TypeTag.Scalar, value: Scalar.U32 },
+  [Scalar.I32]: { tag: TypeTag.Scalar, value: Scalar.I32 },
   [Scalar.USIZE]: { tag: TypeTag.Scalar, value: Scalar.USIZE },
   [Scalar.F32]: { tag: TypeTag.Scalar, value: Scalar.F32 },
+  [Scalar.F64]: { tag: TypeTag.Scalar, value: Scalar.F64 },
   [Scalar.Str]: { tag: TypeTag.Scalar, value: Scalar.Str },
   [Scalar.Bool]: { tag: TypeTag.Scalar, value: Scalar.Bool }
 };
@@ -66,7 +70,7 @@ export const T = {
   Scalar: scalarsToType,
   Vec: (value: Type): Type => ({ tag: TypeTag.Vec, value }),
   Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
-  RefTo: (value: string | EntryT): Type => ({
+  RefTo: (value: string | EntryType): Type => ({
     tag: TypeTag.RefTo,
     value: typeof value === 'string' ? value : getEntryName(value)
   })
@@ -88,7 +92,7 @@ export const getVariantName = Variant.match({
   Unit: getName
 });
 
-export type EntryT = typeof EntryType.T;
-export type VariantT = typeof Variant.T;
+export type EntryType = typeof EntryType.T;
+export type Variant = typeof Variant.T;
 
 export type FileBlock = string;

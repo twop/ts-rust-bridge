@@ -1,20 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "es2018",
-    "module": "esnext",
-    "removeComments": false,
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true,
-    "moduleResolution": "node",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "declaration": true,
-    "strictNullChecks": true,
-    "strict": true
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "__tests__", "**/__tests__", "src/__tests__"]
+  "extends": "../../tsconfig.json",
+
+  "include": ["src/**/*"]
 }

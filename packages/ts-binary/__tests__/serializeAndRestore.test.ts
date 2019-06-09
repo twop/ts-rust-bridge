@@ -1,8 +1,8 @@
 import {
   write_str,
-  write_seq,
+  seq_writer,
   write_u32,
-  read_seq,
+  seq_reader,
   read_u32,
   read_str,
   Sink,
@@ -14,10 +14,14 @@ import {
   write_bool,
   read_u8,
   write_u8,
-  write_opt,
-  read_opt,
+  opt_writer,
+  opt_reader,
   read_f32,
-  write_f32
+  write_f32,
+  write_i32,
+  read_i32,
+  write_f64,
+  read_f64
 } from '../src/index';
 
 let sink: Sink = {
@@ -49,6 +53,16 @@ test('it reads and writes f32', () => {
   expect(restore(read_f32, serialize(f32, write_f32))).toBe(f32);
 });
 
+test('it reads and writes f64', () => {
+  const f64 = Number.MAX_VALUE;
+  expect(restore(read_f64, serialize(f64, write_f64))).toBe(f64);
+});
+
+test('it reads and writes i32', () => {
+  const i32 = -100;
+  expect(restore(read_i32, serialize(i32, write_i32))).toBe(i32);
+});
+
 test('it reads and writes u16', () => {
   const u16 = 253 * 4; // will require two bytes to store
   expect(restore(read_u16, serialize(u16, write_u16))).toBe(u16);
@@ -67,20 +81,16 @@ test('it reads and writes u8', () => {
 test('it reads and writes sequence of strings', () => {
   const seq = ['abc', 'бла', 'some other str'];
 
-  const writeStrings: Serializer<string[]> = (s, arr) =>
-    write_seq(s, arr, write_str);
+  const writeStrings = seq_writer(write_str);
 
-  const readStrings: Deserializer<string[]> = s => read_seq(s, read_str);
+  const readStrings = seq_reader(read_str);
 
   expect(restore(readStrings, serialize(seq, writeStrings))).toEqual(seq);
 });
 
 test('it reads and writes optional string', () => {
-  const writeOptString: Serializer<string | undefined> = (s, maybeVal) =>
-    write_opt(s, maybeVal, write_str);
-
-  const readOptString: Deserializer<string | undefined> = s =>
-    read_opt(s, read_str);
+  const writeOptString = opt_writer(write_str);
+  const readOptString = opt_reader(read_str);
 
   const str = 'some str';
   expect(restore(readOptString, serialize(str, writeOptString))).toEqual(str);
