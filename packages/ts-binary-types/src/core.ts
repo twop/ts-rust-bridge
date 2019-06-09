@@ -9,8 +9,6 @@ export interface BinTypeDesc<TTag extends string, T = any> {
   _phantomType: T;
 }
 
-type Omit<ToExclude, T> = Pick<T, Exclude<keyof T, ToExclude>>;
-
 export type AnyBinType = BinType<any, any, any>;
 
 export interface BinType<TypeTag extends string, T = any, Extra = {}> {
@@ -25,8 +23,8 @@ export const createBinType = <R extends BinType<any, any>>(
   read: Deserializer<Static<R>>,
   write: Serializer<Static<R>>,
   tag: R[typeof bindesc]["tag"],
-  extra: Omit<"read" | "write" | "tag" | "_phantomType", R[typeof bindesc]>,
-  baseObj: Omit<typeof bindesc, R>
+  extra: Omit<R[typeof bindesc], "read" | "write" | "tag" | "_phantomType">,
+  baseObj: Omit<R, typeof bindesc>
 ): R => {
   (baseObj as any)[bindesc] = Object.assign(extra, { read, write, tag });
   return baseObj as any;
