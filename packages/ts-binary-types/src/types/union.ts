@@ -21,6 +21,7 @@ export interface Tagged<Val, T extends string | number | symbol> {
 
 export interface ConstTag<T extends string | number | symbol> {
   tag: T;
+  val: undefined;
 }
 
 type Unify<Record extends VariantDefs> = {
@@ -63,29 +64,21 @@ export const Union = <V extends VariantDefs>(variants: V): Union<V> =>
 const createUnionSerializer = <V extends VariantDefs>(
   variants: V
 ): Serializer<UnionVal<V>> => {
-  const keys = Object.keys(variants);
+  const serializersMap = {} as {
+    [key: string]: Serializer<any>;
+  };
 
-  const serializersMap = keys.reduce(
-    (m, key, i) => {
-      const variantType = variants[key];
+  Object.keys(variants).forEach((key, i) => {
+    const variantType = variants[key];
 
-      if (variantType === null) {
-        return {
-          ...m,
-          [key]: (sink: Sink) => write_u32(sink, i)
-        };
-      }
-
-      const serializer = variantType[bindesc].write;
-      return {
-        ...m,
-        [key]: (sink: Sink, val: any) => serializer(write_u32(sink, i), val)
-      };
-    },
-    {} as {
-      [key: string]: Serializer<any>;
+    if (variantType === null) {
+      serializersMap[key] = (sink: Sink, _val: undefined) => write_u32(sink, i);
+    } else {
+      const serializer = variantType![bindesc].write;
+      serializersMap[key] = (sink: Sink, val: any) =>
+        serializer(write_u32(sink, i), val);
     }
-  );
+  });
 
   return ((sink: Sink, { tag, val }: { tag: string; val: any }) =>
     serializersMap[tag](sink, val)) as any;
@@ -102,8 +95,8 @@ const createUnionDeserializer = <V extends VariantDefs>(
   });
 
   const unitValues = keys.map(key => {
-    const runtype = variants[key];
-    return runtype ? null : { tag: key };
+    const bintype = variants[key];
+    return bintype ? null : { tag: key, val: undefined };
   });
 
   return (sink: Sink): any => {
@@ -121,7 +114,9 @@ const createUnionConstructors = <V extends VariantDefs>(
     (map, tag) => {
       const typeDef = variants[tag];
       (map as any)[tag] =
-        typeDef === null ? { tag } : (val: any) => ({ tag, val });
+        typeDef === null
+          ? { tag, val: undefined }
+          : (val: any) => ({ tag, val });
       return map;
     },
     {} as Contsructors<V>

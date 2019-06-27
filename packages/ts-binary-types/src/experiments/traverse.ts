@@ -1,14 +1,14 @@
-import { Option } from '../types/option';
-import { Nullable } from '../types/nullable';
-import { Str } from '../types/str';
-import { Struct } from '../types/struct';
-import { Tuple } from '../types/tuple';
-import { Union } from '../types/union';
-import { Vec } from '../types/vector';
-import { bindesc, TypeTag, BinType } from '../core';
-import { Bool } from '../types/bool';
-import { F32, I32, U32, U16, U8, F64 } from '../types/numbers';
-import { Enum } from '../types/enum';
+import { Optional } from "../types/optional";
+import { Nullable } from "../types/nullable";
+import { Str } from "../types/str";
+import { Struct } from "../types/struct";
+import { Tuple } from "../types/tuple";
+import { Union } from "../types/union";
+import { Vec } from "../types/vector";
+import { bindesc, TypeTag, BinType } from "../core";
+import { Bool } from "../types/bool";
+import { F32, I32, U32, U16, U8, F64 } from "../types/numbers";
+import { Enum } from "../types/enum";
 
 export type BuiltInType =
   | Bool
@@ -20,7 +20,7 @@ export type BuiltInType =
   | U16
   | U8
   | Enum<any>
-  | Option<any>
+  | Optional<any>
   | Nullable<any>
   | Vec<any>
   | Tuple<any>
@@ -37,7 +37,7 @@ module AST {
     | TypeTag.U32
     | TypeTag.U16
     | TypeTag.U8
-    | { tag: TypeTag.Option | TypeTag.Vec | TypeTag.Nullable; type: BinNode }
+    | { tag: TypeTag.Optional | TypeTag.Vec | TypeTag.Nullable; type: BinNode }
     | { tag: TypeTag.Struct; fields: ([string, BinNode])[] }
     | { tag: TypeTag.Union; variants: { [key: string]: BinNode | null } }
     | { tag: TypeTag.Enum; variants: string[] }
@@ -57,7 +57,7 @@ export const bintypeToBinAst = (bintype: BuiltInType): AST.BinNode => {
     case TypeTag.U32:
       return data.tag;
 
-    case TypeTag.Option:
+    case TypeTag.Optional:
     case TypeTag.Nullable:
     case TypeTag.Vec:
       return { tag: data.tag, type: bintypeToBinAst(data.type) };
@@ -109,7 +109,7 @@ export const bintypeToBinAst = (bintype: BuiltInType): AST.BinNode => {
   const shouldHaveChecked: never = data;
   shouldHaveChecked;
 
-  throw new Error('uknown type ' + (data as any).tag);
+  throw new Error("uknown type " + (data as any).tag);
 };
 
 export const binAst2bintype = (node: AST.BinNode): BuiltInType => {
@@ -123,8 +123,8 @@ export const binAst2bintype = (node: AST.BinNode): BuiltInType => {
   if (node === TypeTag.U8) return U8;
 
   switch (node.tag) {
-    case TypeTag.Option:
-      return Option(binAst2bintype(node.type));
+    case TypeTag.Optional:
+      return Optional(binAst2bintype(node.type));
     case TypeTag.Nullable:
       return Nullable(binAst2bintype(node.type));
     case TypeTag.Vec:
@@ -172,5 +172,5 @@ export const binAst2bintype = (node: AST.BinNode): BuiltInType => {
     }
   }
 
-  throw new Error('uknown type ' + JSON.stringify(node));
+  throw new Error("uknown type " + JSON.stringify(node));
 };

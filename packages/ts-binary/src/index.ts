@@ -1,3 +1,5 @@
+import { encode as encodeAsUTF8 } from './utf8encoding';
+
 export type Sink = {
   pos: number;
   arr: Uint8Array;
@@ -21,11 +23,7 @@ const reserve = (sink: Sink, numberOfBytes: number): Sink => {
 
   const newLen = Math.max(arr.length * 2, arr.length + numberOfBytes);
   const newArr = new Uint8Array(newLen);
-
-  for (let i = 0; i < pos; i++) {
-    newArr[i] = arr[i];
-  }
-
+  newArr.set(arr, 0);
   return { arr: newArr, pos };
 };
 
@@ -64,19 +62,14 @@ export const write_i32: Serializer<number> = (sink, val) => {
   return write_u32(reserve(sink, 4), au32[0]);
 };
 
-const write_bytes = (sink: Sink, bytes: Uint8Array): Sink => {
-  sink = reserve(sink, bytes.length);
-  const { arr, pos } = sink;
-  arr.set(bytes, pos);
-  sink.pos += bytes.length;
-  return sink;
-};
-
-const encoder = new TextEncoder();
-
 export const write_str: Serializer<string> = (sink, val) => {
-  const bytes = encoder.encode(val);
-  return write_bytes(write_u64(sink, bytes.length), bytes);
+  sink = reserve(sink, val.length * 3 + 8);
+  const { arr, pos } = sink;
+  // reserve 8 bytes for the u64 len
+  const bytesWritten = encodeAsUTF8(val, arr, pos + 8);
+  sink = write_u64(sink, bytesWritten);
+  sink.pos += bytesWritten;
+  return sink;
 };
 
 export const write_bool: Serializer<boolean> = (sink, val) =>

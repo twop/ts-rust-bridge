@@ -43,7 +43,7 @@ export enum TypeTag {
   Struct = "Struct",
   Tuple = "Tuple",
   Union = "Union",
-  Option = "Option",
+  Optional = "Optional",
   Nullable = "Nullable",
   Vec = "Vec"
 }

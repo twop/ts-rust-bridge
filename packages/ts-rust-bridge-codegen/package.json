@@ -36,7 +36,7 @@
     "run:example": "ts-node -r esm examples/runExample.ts",
     "gen:test-code": "ts-node -r esm __tests__/genTypesForTests.ts",
     "test": "jest",
-    "benchmark": "node -r esm -r ts-node/register examples/benchmark.ts "
+    "benchmark": "node -r esm -r ts-node/register examples/benchmark.ts"
   },
   "dependencies": {
     "ts-union": "^2.1.1"

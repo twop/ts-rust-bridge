@@ -1,7 +1,7 @@
 export { Bool } from "./types/bool";
 export { Enum } from "./types/enum";
 export { I32, F32, F64, U8, U16, U32 } from "./types/numbers";
-export { Option } from "./types/option";
+export { Optional } from "./types/optional";
 export { Str } from "./types/str";
 export { Struct, RStruct } from "./types/struct";
 export { Tuple, RTuple } from "./types/tuple";

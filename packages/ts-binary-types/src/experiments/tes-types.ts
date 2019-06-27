@@ -9,8 +9,10 @@ import {
   Static,
   U8,
   Vec,
-  Option
+  Optional,
+  F64
 } from "..";
+import { I32 } from "../types/numbers";
 
 // import { Struct } from './types/struct';
 // import { Static } from './core';
@@ -43,6 +45,12 @@ import {
 //   VStruct { id: String, data: String },
 // }
 
+export const SmallStruct = Struct({
+  bool: Bool,
+  f64: F64,
+  maybeI32: Optional(I32)
+});
+
 export const VStruct = Struct({
   id: Str,
   data: Str
@@ -51,8 +59,9 @@ export const VStruct = Struct({
 export const Message = Union({
   Unit: null,
   One: F32,
-  Two: Tuple(Option(Bool), U32),
-  VStruct
+  Two: Tuple(Optional(Bool), U32),
+  VStruct,
+  SmallStruct
 });
 
 export interface VStruct extends Static<typeof VStruct> {}
