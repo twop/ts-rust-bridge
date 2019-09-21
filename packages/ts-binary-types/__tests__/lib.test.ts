@@ -3,7 +3,7 @@ import { BinType, bindesc, Static } from "../src/core";
 import { U8, U16, U32, I32, F32, F64 } from "../src/types/numbers";
 import { Bool } from "../src/types/bool";
 import { Str } from "../src/types/str";
-import { Option } from "../src/types/option";
+import { Optional } from "../src/types/optional";
 import { Enum } from "../src/types/enum";
 import { Vec } from "../src/types/vector";
 import { Tuple } from "../src";
@@ -78,7 +78,7 @@ test("can save and restore Str", () => {
 });
 
 test("can save and restore Option(Str)", () => {
-  const OptStr = Option(Str);
+  const OptStr = Optional(Str);
   expect(saveAndRestore(undefined, OptStr)).toBe(undefined);
   expect(saveAndRestore("abc", OptStr)).toBe("abc");
 });
