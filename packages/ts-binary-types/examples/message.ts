@@ -3,15 +3,17 @@ import {
   Vec,
   Tuple,
   Bool,
-  Str,
+  // Str,
   F64,
   Static,
   bindesc,
-  Union
+  Union,
+  I32,
+  Sink
 } from "../src/index";
 
-// const BoolStr = Tuple(Bool, F64);
-const BoolStr = Tuple(Bool, Str);
+const BoolStr = Tuple(Bool, I32);
+// const BoolStr = Tuple(Bool, Str);
 
 const Inner = Union({
   B: Bool,
@@ -30,6 +32,8 @@ export const Msg = Struct({
 export type Msg = Static<typeof Msg>;
 
 const genF64 = () => Math.random() * 1000000;
+const genI32 = () =>
+  Math.floor(Math.random() * 1000000 * (Math.random() > 0.5 ? 1 : -1));
 
 function randomStr(length: number): string {
   var text = "";
@@ -40,7 +44,7 @@ function randomStr(length: number): string {
 
   return text;
 }
-
+randomStr;
 // export const genMessage = (vecSize: number): Msg => [
 //   Array.from({ length: vecSize }, () => BoolStr(genBool(), genF64())),
 //   Array.from({ length: vecSize }, genF64),
@@ -59,7 +63,8 @@ export const genMessage = (vecSize: number): Msg => ({
   vec: Array.from(
     { length: vecSize },
     // () => BoolStr(genBool(), genF64())
-    () => BoolStr(genBool(), randomStr(vecSize))
+    // () => BoolStr(genBool(), randomStr(vecSize))
+    () => BoolStr(genBool(), genI32())
   ),
   nums: Array.from({ length: vecSize }, genF64),
   unions: Array.from({ length: vecSize }, () => {
@@ -74,11 +79,15 @@ export const genMessage = (vecSize: number): Msg => ({
   })
 });
 
-export const writeMessage = (msg: Msg, arr: ArrayBuffer): ArrayBuffer =>
-  Msg[bindesc].write({ arr: new Uint8Array(arr), pos: 0 }, msg).arr.buffer;
+export const writeMessage = (msg: Msg, arr: Uint8Array): Uint8Array =>
+  Msg[bindesc].write({ arr, pos: 0 }, msg).arr;
 
-export const readMessage = (arr: ArrayBuffer): Msg =>
-  Msg[bindesc].read({ arr: new Uint8Array(arr), pos: 0 });
+export const readMessage = (arr: Uint8Array): Msg => {
+  const sink: Sink = { arr, pos: 0 };
+  const res = Msg[bindesc].read(sink);
+  // console.log(`read ${sink.pos} bytes`);
+  return res;
+};
 
 function genBool(): boolean {
   return Math.random() > 0.5;
@@ -88,3 +97,6 @@ export type WorkerMsg =
   | { tag: "json"; val: Msg }
   | { tag: "msg_arr"; val: ArrayBuffer }
   | { tag: "shared_arr"; val: SharedArrayBuffer };
+
+export const printExecTime = (name: string, hrtime: [number, number]) =>
+  console.info(name + " took (hr): %ds %dms", hrtime[0], hrtime[1] / 1000000);

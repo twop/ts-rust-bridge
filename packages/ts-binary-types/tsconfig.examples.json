@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.build.json",
+
+  "compilerOptions": {
+    "outDir": "./examples_built",
+    "rootDir": "./",
+    "composite": true,
+    "module": "commonjs"
+  },
+
+  "references": [
+    {
+      "path": "../ts-binary/tsconfig.build.json"
+    }
+  ],
+
+  "include": ["examples/**/*", "src/**/*"]
+}

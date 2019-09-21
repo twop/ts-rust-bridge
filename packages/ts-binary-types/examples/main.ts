@@ -5,7 +5,8 @@ import {
   Msg,
   writeMessage,
   readMessage,
-  WorkerMsg
+  WorkerMsg,
+  printExecTime
 } from "./message";
 
 // import { Sink, Serializer, bindesc } from "../src/index";
@@ -40,10 +41,10 @@ import {
 //   log(`${name}: ${result.toFixed(2)} ms`);
 // };
 
-const COUNT = 10;
+const COUNT = 100;
 const stopGC: any[] = [];
 
-const messages = Array.from({ length: COUNT }, () => genMessage(100));
+const messages = Array.from({ length: COUNT }, () => genMessage(10));
 
 const worker = new Worker(join(__dirname, "worker.js"));
 
@@ -75,9 +76,10 @@ const measureJson = () => {
   sendMsgObj(messages[0]);
 };
 
-const sendMsgBin = (msg: Msg, arr: ArrayBuffer) => {
-  const toSend = writeMessage(msg, arr);
-  worker.postMessage({ tag: "msg_arr", val: toSend } as WorkerMsg, [toSend]);
+const sendMsgBin = (msg: Msg, arr: Uint8Array) => {
+  const toSend = writeMessage(msg, arr).buffer;
+  const workerMsg: WorkerMsg = { tag: "msg_arr", val: toSend };
+  worker.postMessage(workerMsg, [toSend]);
   //   return worker.postMessage(toSend, [toSend]);
 };
 
@@ -88,26 +90,31 @@ const measureBinary = () => {
 
   const hrstart = process.hrtime();
 
-  worker.on("message", (arr: ArrayBuffer) => {
+  let ping_time = process.hrtime();
+  let pong_time = process.hrtime();
+
+  worker.on("message", (buffer: ArrayBuffer) => {
+    const arr = new Uint8Array(buffer);
     const msg = readMessage(arr);
+    pong_time = process.hrtime(ping_time);
+    printExecTime("ping-pong", pong_time);
     // console.log("got arr.len", arr.byteLength);
     recieved[i] = msg;
     i++;
     if (i < messages.length) {
       sendMsgBin(messages[i], arr);
+      ping_time = process.hrtime();
     } else {
       worker.removeAllListeners("message");
 
       const hrend = process.hrtime(hrstart);
 
       printExecTime("binary", hrend);
+      worker.terminate();
     }
   });
-  sendMsgBin(messages[0], new Uint8Array(1024).buffer);
+  sendMsgBin(messages[0], new Uint8Array(1024));
 };
-
-const printExecTime = (name: string, hrtime: [number, number]) =>
-  console.info(name + " took (hr): %ds %dms", hrtime[0], hrtime[1] / 1000000);
 
 // const measureSharedArrayBuff = () => {
 //   let i = 0;

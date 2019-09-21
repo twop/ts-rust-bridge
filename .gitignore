@@ -1,10 +1,12 @@
 /packages/*/node_modules
 /packages/*/pkg
+/packages/*/examples_built
 /node_modules
 lerna-debug.log
 todo/
 .DS_Store
 *.log
+*.tsbuildinfo
 /.nyc_output
 /coverage
 /dist-*
