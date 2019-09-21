@@ -2,9 +2,6 @@
   "name": "ts-binary",
   "version": "0.6.0",
   "description": "A collection of helper functions to serialize data structures in typescript to rust bincode format",
-  "types": "pkg/dist-types/index.d.ts",
-  "main": "pkg/dist-node/index.js",
-  "module": "pkg/dist-web/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
