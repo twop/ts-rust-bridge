@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.build.json",
+
+  "compilerOptions": {
+    "rootDir": "./src",
+    "module": "commonjs"
+  },
+
+  "references": [
+    {
+      "path": "../ts-binary/tsconfig.build.json"
+    }
+  ],
+
+  "include": ["src/**/*"]
+}

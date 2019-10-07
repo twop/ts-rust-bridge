@@ -1,6 +1,6 @@
 {
   "name": "ts-binary",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "A collection of helper functions to serialize data structures in typescript to rust bincode format",
   "license": "MIT",
   "repository": {

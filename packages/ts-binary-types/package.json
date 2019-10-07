@@ -34,8 +34,8 @@
   "scripts": {
     "build": "pika build",
     "test": "jest",
-    "bench": "node -r esm -r ts-node/register -r esm src/experiments/bench.ts",
-    "bench-trace": "node -r esm -r ts-node/register -r esm --trace-opt --trace-deopt src/experiments/bench.ts >> bench.log",
+    "bench": "ts-node --project ./tsconfig.bench.json src/experiments/bench.ts",
+    "bench-trace": "node -r esm -r ts-node/register --trace-opt --trace-deopt src/experiments/bench.ts >> bench.log",
     "run-example": "npm run tsc-example &&  node --experimental-modules examples_built/examples/main.js",
     "tsc-example": "tsc --build tsconfig.examples.json"
   },

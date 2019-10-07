@@ -1,5 +1,3 @@
-import { encode as encodeAsUTF8 } from './utf8encoding';
-
 export type Sink = {
   pos: number;
   arr: Uint8Array;
@@ -62,11 +60,22 @@ export const write_i32: Serializer<number> = (sink, val) => {
   return write_u32(reserve(sink, 4), au32[0]);
 };
 
+const encoder = new TextEncoder();
+
+const encodeStrInto: (str: string, resArr: Uint8Array, pos: number) => number =
+  'encodeInto' in encoder
+    ? (str, arr, pos) =>
+        encoder.encodeInto(str, new Uint8Array(arr.buffer, pos)).written!
+    : (str, arr, pos) => {
+        const bytes: Uint8Array = (encoder as any).encode(str);
+        arr.set(bytes, pos);
+        return bytes.length;
+      };
+
 export const write_str: Serializer<string> = (sink, val) => {
-  sink = reserve(sink, val.length * 3 + 8);
-  const { arr, pos } = sink;
   // reserve 8 bytes for the u64 len
-  const bytesWritten = encodeAsUTF8(val, arr, pos + 8);
+  sink = reserve(sink, val.length * 3 + 8);
+  const bytesWritten = encodeStrInto(val, sink.arr, sink.pos + 8);
   sink = write_u64(sink, bytesWritten);
   sink.pos += bytesWritten;
   return sink;
@@ -107,12 +116,11 @@ export const read_u16: Deserializer<number> = sink => {
 };
 
 export const read_u64: Deserializer<number> = sink => {
-  // we dont support numbers more than u32 (yet)
+  // we don't support numbers more than u32 (yet)
   const val = read_u32(sink);
   sink.pos += 4;
   return val;
 };
-// write_u32(write_u32(reserve(sink, 8), val), 0);
 
 export const read_f32: Deserializer<number> = sink => {
   au8[0] = rb(sink);
@@ -146,10 +154,13 @@ export const seq_reader = <T>(
   readEl: Deserializer<T>
 ): Deserializer<T[]> => sink => {
   const count = read_u64(sink);
-  const res = new Array<T>(count);
+
+  // Note it doesn't make sense to set capacity here
+  // because it will mess up shapes
+  const res = new Array<T>();
 
   for (let i = 0; i < count; i++) {
-    res[i] = readEl(sink);
+    res.push(readEl(sink));
   }
 
   return res;

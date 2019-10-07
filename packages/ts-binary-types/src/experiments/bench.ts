@@ -85,8 +85,8 @@ const bench = () => {
   const messages: Message[] = Array.from(
     { length: COUNT },
     // () => ctors[2]()
-    // () => ctors[3]()
-    () => ctors[4]()
+    () => ctors[3]() // strings
+    // () => ctors[4]()
     // () => ctors[Math.floor(Math.random() * 5)]()
   );
   log("----Simple(END)---");
