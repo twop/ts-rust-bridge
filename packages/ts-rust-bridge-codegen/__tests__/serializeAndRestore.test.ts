@@ -1,14 +1,10 @@
 import { Sink, Deserializer, Serializer } from '../../ts-binary/src/index';
 
 import * as t from './generated/types';
-import * as s from './generated/serializers';
-import * as d from './generated/deserializers';
+import * as sd from './generated/types.serde.g';
 
 const serde = <T>(val: T, ser: Serializer<T>, deser: Deserializer<T>): T => {
-  let sink: Sink = {
-    arr: new Uint8Array(1), // small on purpose
-    pos: 0
-  };
+  let sink = Sink(new ArrayBuffer(1));
 
   sink = ser(sink, val);
   sink.pos = 0;
@@ -18,32 +14,27 @@ const serde = <T>(val: T, ser: Serializer<T>, deser: Deserializer<T>): T => {
 
 test('it reads and writes Enum', () => {
   const val = t.MyEnum.Three;
-  expect(serde(val, s.writeMyEnum, d.readMyEnum)).toBe(val);
+  expect(serde(val, sd.writeMyEnum, sd.readMyEnum)).toBe(val);
 });
 
 test('it reads and writes Tuple', () => {
-  const val = t.Tuple(false, ['a', 'b', 'ccs']);
-  expect(serde(val, s.writeTuple, d.readTuple)).toEqual(val);
-});
-
-test('it reads and writes Tuple', () => {
-  const val = t.Tuple(false, ['a', 'b', 'ccs']);
-  expect(serde(val, s.writeTuple, d.readTuple)).toEqual(val);
+  const val = t.MyTuple(false, ['a', 'b', 'ccs']);
+  expect(serde(val, sd.writeMyTuple, sd.readMyTuple)).toEqual(val);
 });
 
 test('it reads and writes NewType', () => {
   const val = t.NewTypeU32(3);
-  expect(serde(val, s.writeNewTypeU32, d.readNewTypeU32)).toBe(val);
+  expect(serde(val, sd.writeNewTypeU32, sd.readNewTypeU32)).toBe(val);
 });
 
 test('it reads and writes Alias', () => {
   const val: t.AliasToStr = 'str';
-  expect(serde(val, s.writeAliasToStr, d.readAliasToStr)).toBe(val);
+  expect(serde(val, sd.writeAliasToStr, sd.readAliasToStr)).toBe(val);
 });
 
 test('it reads and writes Structs', () => {
-  const val: t.JustAStruct = { u8: 5, myTuple: t.Tuple(true, ['aha!']) };
-  expect(serde(val, s.writeJustAStruct, d.readJustAStruct)).toEqual(val);
+  const val: t.JustAStruct = { u8: 5, myTuple: t.MyTuple(true, ['aha!']) };
+  expect(serde(val, sd.writeJustAStruct, sd.readJustAStruct)).toEqual(val);
 });
 
 test('it reads and writes Union variants', () => {
@@ -55,10 +46,10 @@ test('it reads and writes Union variants', () => {
     Unit,
     Float32(f32Arr[0]),
     BoolAndU32(false, 445),
-    StructVariant({ id: 'str', tuple: t.Tuple(false, ['bla']) })
+    StructVariant({ id: 'str', tuple: t.MyTuple(false, ['bla']) })
   ];
 
   values.forEach(val =>
-    expect(serde(val, s.writeSimpleUnion, d.readSimpleUnion)).toEqual(val)
+    expect(serde(val, sd.writeSimpleUnion, sd.readSimpleUnion)).toEqual(val)
   );
 });

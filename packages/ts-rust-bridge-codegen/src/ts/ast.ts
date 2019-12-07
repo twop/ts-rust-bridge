@@ -1,7 +1,6 @@
 import { Union, of } from 'ts-union';
 
-export type D = number;
-export module D {
+export module Code {
   export type StringEnum = {
     name: string;
     variants: [string, string][];
@@ -53,13 +52,14 @@ export module D {
 }
 
 export const TsFileBlock = Union({
-  StringEnum: of<D.StringEnum>(),
-  Interface: of<D.Interface>(),
-  Union: of<D.Union>(),
-  ArrowFunc: of<D.ArrowFunc>(),
-  Alias: of<D.Alias>(),
-  ConstVar: of<D.ConstVar>(),
-  Import: of<D.Import>()
+  StringEnum: of<Code.StringEnum>(),
+  Interface: of<Code.Interface>(),
+  Union: of<Code.Union>(),
+  LineComment: of<string>(),
+  ArrowFunc: of<Code.ArrowFunc>(),
+  Alias: of<Code.Alias>(),
+  ConstVar: of<Code.ConstVar>(),
+  Import: of<Code.Import>()
 });
 
 export type TsFileBlock = typeof TsFileBlock.T;

@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "ts-binary-types"
+		},
+		{
+			"path": "ts-binary"
+		},
+		{
+			"path": "ts-rust-bridge-codegen"
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
+			"activityBar.background": "#3f341a",
+			"activityBar.activeBorder": "#2f715d",
+			"activityBar.foreground": "#e7e7e7",
+			"activityBar.inactiveForeground": "#e7e7e799",
+			"activityBarBadge.background": "#2f715d",
+			"activityBarBadge.foreground": "#e7e7e7",
+			"titleBar.activeBackground": "#1b160b",
+			"titleBar.inactiveBackground": "#1b160b99",
+			"titleBar.activeForeground": "#e7e7e7",
+			"titleBar.inactiveForeground": "#e7e7e799",
+			"statusBar.background": "#1b160b",
+			"statusBarItem.hoverBackground": "#3f341a",
+			"statusBar.foreground": "#e7e7e7"
+		},
+		"peacock.color": "#1b160b"
+	}
+}

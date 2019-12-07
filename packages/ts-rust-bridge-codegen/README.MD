@@ -20,33 +20,29 @@ The goal of the this project is to provide a toolset to build efficient communic
 
 ## Example
 
-Define AST(ish) structure in typescript. Note that it is a small subset of `serde` types from rust ecosystem.
+Define schema in typescript DSL (Domain specific language). Note that it is a small subset of `serde` types from rust ecosystem.
 
 ```ts
-import { EntryType, T, Variant as V } from 'ts-rust-bridge-codegen';
+import { schema2ts, schema2rust, Type } from 'ts-rust-bridge-codegen';
+import * as fs from 'fs';
 
-const Message = EntryType.Union(
-  'Message',
-  [
-    V.Unit('Unit'),
-    V.NewType('One', T.Scalar.F32),
-    V.Tuple('Two', [T.Option(T.Scalar.Bool), T.Scalar.F32]),
-    V.Struct('VStruct', { id: T.Scalar.Str, data: T.Scalar.Str })
-  ],
-  // if are going to use bincode set to false, otherwise true
-  // it regulates if the rust declaration should be annotated with
-  // #[serde(tag = "tag", content = "value")]
-  { tagAnnotation: false }
-);
-```
+const { Enum, Struct, Str, F32 } = Type;
 
-Then codegen typescript and rust:
+const Size = Enum('S', 'M', 'L');
+const Shirt = Struct({ size: Size, color: Str, price: F32 });
+const schema = { Size, Shirt };
 
-```ts
-import { schema2rust, schema2ts } from 'ts-rust-bridge-codegen';
+const tsCode = schema2ts(schema).join('\n\n');
 
-const tsCode = schema2ts([Message]).join('\n\n');
-const rustCode = schema2rust([Message]).join('\n\n');
+const rustCode = `
+use serde::{Deserialize, Serialize};
+
+${schema2rust(schema).join('\n')}
+`;
+
+// save to disc
+fs.writeFileSync('schema.ts', tsCode);
+fs.writeFileSync('schema.rs', rustCode);
 ```
 
 And here is the result:
@@ -54,49 +50,38 @@ And here is the result:
 rust
 
 ```rust
-#[derive(Deserialize, Debug, Clone)]
-pub enum Message {
-    Unit,
-    One(f32),
-    Two(Option<bool>, f32),
-    VStruct { id: String, data: String },
+// schema.rs
+use serde::{Deserialize, Serialize};
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Shirt {
+    pub size: Size,
+    pub color: String,
+    pub price: f32,
+}
+
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub enum Size {
+    S,
+    M,
+    L,
 }
 ```
 
 typescript
 
 ```ts
-export type Message =
-  | { tag: 'Unit' }
-  | { tag: 'One'; value: number }
-  | { tag: 'Two'; value: Message_Two }
-  | { tag: 'VStruct'; value: Message_VStruct };
-
-export interface Message_Two {
-  0: (boolean) | undefined;
-  1: number;
-  length: 2;
+// schema.ts after prettier
+export interface Shirt {
+  size: Size;
+  color: string;
+  price: number;
 }
 
-export interface Message_VStruct {
-  id: string;
-  data: string;
-}
-
-export module Message {
-  export const Unit: Message = { tag: 'Unit' };
-
-  export const One = (value: number): Message => ({ tag: 'One', value });
-
-  export const Two = (p0: (boolean) | undefined, p1: number): Message => ({
-    tag: 'Two',
-    value: [p0, p1]
-  });
-
-  export const VStruct = (value: Message_VStruct): Message => ({
-    tag: 'VStruct',
-    value
-  });
+export enum Size {
+  S = 'S',
+  M = 'M',
+  L = 'L'
 }
 ```
 
@@ -104,7 +89,7 @@ Now you can serialize them as JSON or as binary.
 
 ## Bincode
 
-Now you can serialize your data structures to binary format called `bincode`! You can find more detail about the format here: https://github.com/TyOverby/bincode.
+Now you can serialize your data structures to binary format called `bincode`! You can find more detail about the format here: https://github.com/servo/bincode.
 
 In short: it is a very efficient way to represent data structures that native to rust in a binary form.
 
@@ -113,183 +98,124 @@ In short: it is a very efficient way to represent data structures that native to
 There are three potential usecases:
 
 1. Communicate between typescript (js) and rust code. In case of our initial motivation project (https://github.com/cztomsik/stain) it is node -> rust native via `ffi` module.
-2. Communicate between WebAssembly module written in rust and typecript (I hope I will make an example for it).
+2. Communicate between WebAssembly module written in rust and typecript.
 3. Communicate between WebWorker(ts/js) and main thread(ts/js). That's right, you can just use typescript serializers/deserializers without rust code :)
 
 Any combination of the above: WASM module running in a WebWorker that talks to a rust backend? ^\_^
 
-### How to generate code
+### How to generate code serializers/deserializers for typescript
 
-Note: bincode serialization relies on read/write api to a Uint8Array provided by `ts-binary` package (it is located in the neighbor folder in this repo).
-It is up to you how to make this package available to the generated code.
+Note: bincode serialization relies on read/write api to a ArrayBuffer provided by `ts-binary` package (it is located in the neighbor folder in this repo).
 
 ```ts
 import {
   schema2ts,
-  ast2ts,
-  schema2serializers,
-  schema2deserializers
+  schema2rust,
+  schema2serde,
+  Type
 } from 'ts-rust-bridge-codegen';
-
-// our initial ast declaration file
-import { Message } from './basic.ast';
-import { format } from 'prettier';
 import * as fs from 'fs';
 
-const tsFile = __dirname + '/generated/basic.generated.ts';
-const tsSerFile = __dirname + '/generated/basic.ser.generated.ts';
-const tsDeserFile = __dirname + '/generated/basic.deser.generated.ts';
+const { Enum, Struct, Str, F32 } = Type;
 
-const tsContent = `
-${schema2ts([Message]).join('\n\n')}
+const Size = Enum('S', 'M', 'L');
+const Shirt = Struct({ size: Size, color: Str, price: F32 });
+const schema = { Size, Shirt };
+
+const tsCode = schema2ts(schema).join('\n\n');
+
+const rustCode = `
+use serde::{Deserialize, Serialize};
+
+${schema2rust(schema).join('\n')}
 `;
 
-const tsSerContent = `
-${ast2ts(
-  schema2serializers({
-    entries: [Message],
-    typesDeclarationFile: `./basic.generated`
-  })
-).join('\n\n')}
+const tsSerDeCode = `
+${schema2serde({
+  schema: schema,
+  typesDeclarationFile: `./schema`
+}).join('\n\n')}
 `;
 
-const tsDeserContent = `
-${ast2ts(
-  schema2deserializers({
-    entries: [Message],
-    typesDeclarationFile: `./basic.generated`
-  })
-).join('\n\n')}
-`;
-
-// the output should be prettified. I tried my best but better use prettier :)
-// note you can pass your own options
-const pretty = (content: string) => format(content, { parser: 'typescript' });
-
-fs.writeFileSync(tsFile, pretty(tsContent));
-fs.writeFileSync(tsSerFile, pretty(tsSerContent));
-fs.writeFileSync(tsDeserFile, pretty(tsDeserContent));
+// save to disc
+fs.writeFileSync('schema.ts', tsCode);
+fs.writeFileSync('schema.rs', rustCode);
+fs.writeFileSync('schema_serde.ts', tsSerDeCode);
 ```
 
-It will generate human readable serializers + deserializers.
-
-Serializer:
+In addition to type definitions files it will generate human readable serializers + deserializers.
 
 ```ts
-import { Message, Message_Two, Message_VStruct } from './basic.generated';
+// schema_serde.ts after prettier
+import { Size, Shirt } from './schema';
 
 import {
   write_u32,
-  write_f32,
-  opt_writer,
-  write_bool,
   write_str,
+  write_f32,
   Sink,
-  Serializer
-} from 'ts-binary';
-
-const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
-
-export const writeMessage = (sink: Sink, val: Message): Sink => {
-  switch (val.tag) {
-    case 'Unit':
-      return write_u32(sink, 0);
-    case 'One':
-      return write_f32(write_u32(sink, 1), val.value);
-    case 'Two':
-      return writeMessage_Two(write_u32(sink, 2), val.value);
-    case 'VStruct':
-      return writeMessage_VStruct(write_u32(sink, 3), val.value);
-  }
-};
-
-const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>
-  write_u32(writeOptBool(sink, val[0]), val[1]);
-
-const writeMessage_VStruct = (
-  sink: Sink,
-  { id, data }: Message_VStruct
-): Sink => write_str(write_str(sink, id), data);
-```
-
-Deserializer:
-
-```ts
-import { Message, Message_VStruct } from './basic.generated';
-
-import {
   read_u32,
-  read_f32,
-  opt_reader,
-  read_bool,
   read_str,
-  Sink,
-  Deserializer
+  read_f32
 } from 'ts-binary';
 
-const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
+// Serializers
 
-export const readMessage = (sink: Sink): Message => {
-  switch (read_u32(sink)) {
-    case 0:
-      return Message.Unit;
-    case 1:
-      return Message.One(read_f32(sink));
-    case 2:
-      return Message.Two(readOptBool(sink), read_u32(sink));
-    case 3:
-      return Message.VStruct(readMessage_VStruct(sink));
-  }
-  throw new Error('bad variant index for Message');
-};
+const SizeMap: { [key: string]: number } = { S: 0, M: 1, L: 2 };
 
-const readMessage_VStruct = (sink: Sink): Message_VStruct => {
-  const id = read_str(sink);
-  const data = read_str(sink);
-  return { id, data };
+export const writeSize = (sink: Sink, val: Size): Sink =>
+  write_u32(sink, SizeMap[val]);
+
+export const writeShirt = (sink: Sink, { size, color, price }: Shirt): Sink =>
+  write_f32(write_str(writeSize(sink, size), color), price);
+
+// Deserializers
+
+const SizeReverseMap: Size[] = [Size.S, Size.M, Size.L];
+
+export const readSize = (sink: Sink): Size => SizeReverseMap[read_u32(sink)];
+
+export const readShirt = (sink: Sink): Shirt => {
+  const size = readSize(sink);
+  const color = read_str(sink);
+  const price = read_f32(sink);
+  return { size, color, price };
 };
 ```
 
 ### How to use it
 
 ```ts
-import { Sink, Serializer, Deserializer } from 'ts-binary';
+// usage.ts
+import { writeShirt, readShirt } from './schema_serde';
+import { Shirt, Size } from './schema';
+import { Sink } from 'ts-binary';
 
-// file names are taken from the example
-import { Message } from './generated/basic.generated';
-import { writeMessage } from './generated/basic.ser.generated';
-import { readMessage } from './generated/basic.deser.generated';
+const shirt: Shirt = { color: 'red', price: 10, size: Size.L };
 
-let sink: Sink = {
-  arr: new Uint8Array(1), // automatically resizes if needed
-  pos: 0
-};
+let sink = writeShirt(Sink(new ArrayBuffer(100)), shirt);
 
-// just write to a buffer and return it
-const writeAThing = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
-  sink.pos = 0;
-  sink = ser(sink, thing);
-  return sink.arr;
-};
+console.log('bytes:', new Uint8Array(sink.view.buffer, 0, sink.pos));
+// bytes: Uint8Array
+// [
+// 2, 0, 0, 0,             <-- Size.L
+// 3, 0, 0, 0, 0, 0, 0, 0, <- number of bytes for 'red' in utf-8
+// 114, 101, 100,          <-- 'r', 'e', 'd'
+// 0, 0, 32, 65            <-- 10 as float 32 byte representation
+// ]
 
-// create a new reader sink and read from the beginning
-const readAThing = <T>(arr: Uint8Array, deser: Deserializer<T>): T =>
-  deser({ pos: 0, arr });
-
-const msg = Message.VStruct({ id: 'some id', data: 'some data' });
-
-const bytes = writeAThing(msg, writeMessage);
-const restoredMessage = readAThing(bytes, readMessage);
-
-console.log(
-  `are equals = ${JSON.stringify(msg) ===
-    JSON.stringify(restoredMessage)}, json =`,
-  JSON.stringify(msg)
-);
-// are equals = true, json = {"tag":"VStruct","value":{"id":"some id","data":"some data"}}
+// reset pos to read value back
+sink.pos = 0;
+const restoredShirt = readShirt(sink);
+console.log('restored:', restoredShirt);
+// restored: { size: 'L', color: 'red', price: 10 }
 ```
 
 Look at [examples](https://github.com/twop/ts-rust-bridge/tree/master/packages/ts-rust-bridge-codegen/examples) dir for more information how to use the library.
+
+## API
+
+TODO.
 
 ## Simple benchmarks
 

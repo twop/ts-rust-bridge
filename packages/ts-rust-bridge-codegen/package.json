@@ -1,6 +1,6 @@
 {
   "name": "ts-rust-bridge-codegen",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "description": "A toolset to build efficient communication between rust and typescript",
   "license": "MIT",
   "repository": {
@@ -32,11 +32,13 @@
   },
   "scripts": {
     "build": "pack build",
-    "gen:example-code": "ts-node -r esm examples/genBasic.ts",
-    "run:example": "ts-node -r esm examples/runExample.ts",
-    "gen:test-code": "ts-node -r esm __tests__/genTypesForTests.ts",
+    "gen:example-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/gen_simple.schema.ts",
+    "gen:docs-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/for_docs/gen_docs_example.ts",
+    "run:docs-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/for_docs/usage.ts",
+    "run:example": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/runExample.ts",
+    "gen:test-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" __tests__/gen_testSchema.ts",
     "test": "jest",
-    "benchmark": "node -r esm -r ts-node/register examples/benchmark.ts"
+    "benchmark": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/benchmark.ts"
   },
   "dependencies": {
     "ts-union": "^2.1.1"
@@ -45,17 +47,16 @@
     "@babel/plugin-transform-modules-commonjs": "^7.4.4",
     "@babel/preset-env": "^7.4.5",
     "@babel/preset-typescript": "^7.3.3",
-    "@pika/pack": "^0.3.7",
-    "@pika/plugin-build-node": "^0.4.0",
-    "@pika/plugin-build-web": "^0.4.0",
-    "@pika/plugin-ts-standard-pkg": "^0.4.0",
+    "@pika/pack": "^0.5.0",
+    "@pika/plugin-build-node": "^0.7.1",
+    "@pika/plugin-build-web": "^0.7.1",
+    "@pika/plugin-ts-standard-pkg": "^0.7.1",
     "@types/node": "^12.0.4",
     "@types/prettier": "^1.16.1",
     "ts-binary": "^0.5.0",
-    "esm": "3.1.3",
-    "prettier": "^1.17.1",
-    "ts-node": "^8.2.0",
-    "typescript": "^3.5.1",
+    "prettier": "^1.18.2",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.7.2",
     "jest": "^24.8.0",
     "@types/jest": "^24.0.13",
     "ts-jest": "^24.0.2"

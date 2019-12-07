@@ -1,4 +1,4 @@
-import { TsFileBlock, D } from './ast';
+import { TsFileBlock, Code } from './ast';
 import { FileBlock } from '../schema';
 import { Module, isModule } from './schema2ast';
 
@@ -17,6 +17,7 @@ export const ast2ts = (tsBlocks: (TsFileBlock | Module)[]): FileBlock[] =>
               ArrowFunc: genArrowFunc,
               Union: genUnion,
               Alias: genAlias,
+              LineComment: comment => `// ${comment}`,
               ConstVar: genConstVariable,
               Import: genImport
             })
@@ -30,7 +31,7 @@ const startModule = (name: string): FileBlock => `export module ${name} {
 const endModule = (): FileBlock => `
 }`;
 
-const genStringEnum = ({ name, variants }: D.StringEnum): FileBlock =>
+const genStringEnum = ({ name, variants }: Code.StringEnum): FileBlock =>
   `export enum ${name} {
 ${variants.map(v => `  ${v[0]} = "${v[1]}"`).join(',\n')}
 }
@@ -39,7 +40,7 @@ ${variants.map(v => `  ${v[0]} = "${v[1]}"`).join(',\n')}
 const genInterface = ({
   name: interfaceName,
   fields
-}: D.Interface): FileBlock =>
+}: Code.Interface): FileBlock =>
   `export interface ${interfaceName} {
     ${fields
       .map(
@@ -56,7 +57,7 @@ const genArrowFunc = ({
   wrappedInBraces,
   body,
   dontExport
-}: D.ArrowFunc): FileBlock =>
+}: Code.ArrowFunc): FileBlock =>
   `${dontExport ? '' : 'export '}const ${name} = (${params
     .map(({ name: n, type }) => `${n}: ${type}`)
     .join(', ')})${returnType ? `: ${returnType}` : ''} => ${
@@ -72,7 +73,7 @@ const genUnion = ({
   tagField,
   valueField,
   variants
-}: D.Union): FileBlock =>
+}: Code.Union): FileBlock =>
   `export type ${unionName} = 
 ${variants
   .map(
@@ -84,7 +85,7 @@ ${variants
   .join('\n')}
 `;
 
-const genAlias = ({ name, toType }: D.Alias): FileBlock =>
+const genAlias = ({ name, toType }: Code.Alias): FileBlock =>
   `export type ${name} = ${toType}`;
 
 const genConstVariable = ({
@@ -92,10 +93,10 @@ const genConstVariable = ({
   type,
   expression,
   dontExport
-}: D.ConstVar): FileBlock =>
+}: Code.ConstVar): FileBlock =>
   `${dontExport ? '' : 'export '}const ${name}${
     type ? `: ${type}` : ''
   } = ${expression};`;
 
-const genImport = ({ names, from }: D.Import): FileBlock =>
+const genImport = ({ names, from }: Code.Import): FileBlock =>
   `import { ${names.join(', ')} } from "${from}";`;

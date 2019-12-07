@@ -24,14 +24,82 @@ export type UnionOptions = {
   tagAnnotation: boolean;
 };
 
-export const EntryType = Union({
-  Alias: of<string, Type>(),
-  Struct: of<string, StructMembers>(),
-  Enum: of<string, EnumVariants>(),
-  Tuple: of<string, Type[]>(),
-  Newtype: of<string, Type>(),
-  Union: of<string, Variant[], UnionOptions>()
-});
+export type SchemaElement =
+  | { tag: 'Alias'; val: Type }
+  | { tag: 'Struct'; val: StructMembers }
+  | { tag: 'Enum'; val: EnumVariants }
+  | { tag: 'Tuple'; val: Type[] }
+  | { tag: 'Newtype'; val: Type }
+  | { tag: 'Union'; val: [Variant[], UnionOptions] };
+
+export type Schema = { [name: string]: SchemaElement };
+
+const possibleSchemaElementTags = [
+  'Alias',
+  'Struct',
+  'Enum',
+  'Tuple',
+  'Newtype',
+  'Union'
+];
+
+export const isSchemaElement = (val: unknown): val is SchemaElement =>
+  typeof val === 'object' &&
+  val !== null &&
+  'tag' in val &&
+  possibleSchemaElementTags.includes((val as any).tag);
+
+type MatchSchemaElement<Res> = {
+  Alias: (val: Type) => Res;
+  Struct: (val: StructMembers) => Res;
+  Enum: (val: EnumVariants) => Res;
+  Tuple: (val: Type[]) => Res;
+  Newtype: (val: Type) => Res;
+  Union: (variants: Variant[], options: UnionOptions) => Res;
+};
+
+export const matchSchemaElement = <Res>(
+  entry: SchemaElement,
+  m: MatchSchemaElement<Res>
+): Res => {
+  switch (entry.tag) {
+    case 'Alias':
+      return m.Alias(entry.val);
+    case 'Struct':
+      return m.Struct(entry.val);
+    case 'Enum':
+      return m.Enum(entry.val);
+    case 'Tuple':
+      return m.Tuple(entry.val);
+    case 'Newtype':
+      return m.Newtype(entry.val);
+    case 'Union':
+      return m.Union(entry.val[0], entry.val[1]);
+  }
+};
+
+export type LookupName = (element: SchemaElement) => string;
+
+export const createLookupName = (schema: Schema): LookupName => {
+  const mapping = Object.entries(schema).reduce(
+    (map, [name, entry]) => map.set(entry, name),
+    new Map<SchemaElement, string>()
+  );
+
+  return element => {
+    const name = mapping.get(element);
+    if (name === undefined) {
+      throw new Error(
+        'not found name for:]n' + JSON.stringify(element, undefined, 2)
+      );
+    }
+
+    return name;
+  };
+};
+
+// export type Entry = Entry2; //typeof Entry.T;
+// export type Entry = UnionOf<typeof Entry3>; //typeof Entry.T;
 
 export const Variant = Union({
   Unit: of<string>(),
@@ -43,8 +111,8 @@ export const Variant = Union({
 export enum TypeTag {
   Scalar = 'Scalar',
   Vec = 'Vec',
-  Option = 'Option',
-  RefTo = 'RefTo'
+  Option = 'Option'
+  // RefTo = 'RefTo'
 }
 
 const scalarsToType: { [K in Scalar]: { tag: TypeTag.Scalar; value: K } } = {
@@ -63,27 +131,59 @@ export type Type =
   | { tag: TypeTag.Scalar; value: Scalar }
   | { tag: TypeTag.Vec; value: Type }
   | { tag: TypeTag.Option; value: Type }
-  | { tag: TypeTag.RefTo; value: string };
+  | SchemaElement;
 
-const getName = (s: string) => s;
-export const T = {
-  Scalar: scalarsToType,
-  Vec: (value: Type): Type => ({ tag: TypeTag.Vec, value }),
-  Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
-  RefTo: (value: string | EntryType): Type => ({
-    tag: TypeTag.RefTo,
-    value: typeof value === 'string' ? value : getEntryName(value)
-  })
+const isTypeDefinition = (val: unknown): val is Type => {
+  if (isSchemaElement(val)) return true;
+
+  const possibleTypeTags = [TypeTag.Scalar, TypeTag.Vec, TypeTag.Option];
+  if (typeof val === 'object' && val != null && 'tag' in val) {
+    return possibleTypeTags.includes((val as any).tag);
+  }
+  return false;
 };
 
-const getEntryName = EntryType.match({
-  Alias: getName,
-  Struct: getName,
-  Enum: getName,
-  Tuple: getName,
-  Newtype: getName,
-  Union: getName
-});
+type UnionVariantValue =
+  | null
+  | Type
+  | [Type, Type, ...Type[]]
+  | { [field: string]: Type };
+
+type UnionDef = { [variant: string]: UnionVariantValue };
+const isTupleVariant = (
+  val: UnionVariantValue
+): val is [Type, Type, ...Type[]] => Array.isArray(val);
+
+const unionDefToVariants = (def: UnionDef): Variant[] =>
+  Object.entries(def).map(([field, val]) => {
+    if (val === null) return Variant.Unit(field);
+    if (isTupleVariant(val)) return Variant.Tuple(field, val);
+    if (isTypeDefinition(val)) return Variant.NewType(field, val);
+
+    return Variant.Struct(field, val);
+  });
+
+const getName = (s: string) => s;
+export const Type = {
+  ...scalarsToType,
+  Vec: (value: Type): Type => ({ tag: TypeTag.Vec, value }),
+  Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
+  Alias: (val: Type): SchemaElement => ({ tag: 'Alias', val }),
+  Struct: (val: StructMembers): SchemaElement => ({ tag: 'Struct', val }),
+  Enum: (...variants: string[]): SchemaElement => ({
+    tag: 'Enum',
+    val: { variants }
+  }),
+  Tuple: (...val: Type[]): SchemaElement => ({ tag: 'Tuple', val }),
+  Newtype: (val: Type): SchemaElement => ({ tag: 'Newtype', val }),
+  Union: (
+    def: UnionDef,
+    options: UnionOptions = { tagAnnotation: false }
+  ): SchemaElement => ({
+    tag: 'Union',
+    val: [unionDefToVariants(def), options]
+  })
+};
 
 export const getVariantName = Variant.match({
   Struct: getName,
@@ -92,7 +192,7 @@ export const getVariantName = Variant.match({
   Unit: getName
 });
 
-export type EntryType = typeof EntryType.T;
+// export type EntryType = typeof Entry.T;
 export type Variant = typeof Variant.T;
 
 export type FileBlock = string;

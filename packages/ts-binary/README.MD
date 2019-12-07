@@ -11,10 +11,9 @@ A collection of helper functions to serialize/deserialize primitive types in typ
 ```ts
 import { Sink, write_str, read_str, write_f32, read_f32 } from 'ts-binary';
 
-let sink: Sink = {
-  arr: new Uint8Array(100), // resized automatically if needed
-  pos: 0
-};
+let sink: Sink = Sink(new ArrayBuffer(100));
+// Sink is just a convince function not a class ctor
+// note that it resizes automatically if needed
 
 sink = write_str(sink, 'abc');
 sink = write_f32(sink, 3.14);
@@ -48,9 +47,10 @@ This library is an implementation of 2)
 the api is based on three concepts:
 
 ```ts
-type Sink = {
+export type Sink = {
   pos: number;
-  arr: Uint8Array;
+  view: DataView;
+  littleEndian: boolean;
 };
 
 type Serializer<T> = (sink: Sink, val: T) => Sink;

@@ -1,13 +1,15 @@
-export interface Tuple {
-  0: (boolean) | undefined;
-  1: Array<string>;
-  length: 2;
+export enum MyEnum {
+  One = 'One',
+  Two = 'Two',
+  Three = 'Three'
 }
 
-export const Tuple = (p0: (boolean) | undefined, p1: Array<string>): Tuple => [
-  p0,
-  p1
-];
+export type NewTypeU32 = number & { type: 'NewTypeU32' };
+
+export const NewTypeU32 = (val: number): number & { type: 'NewTypeU32' } =>
+  val as any;
+
+export type AliasToStr = string;
 
 export type SimpleUnion =
   | { tag: 'Unit' }
@@ -23,7 +25,7 @@ export interface SimpleUnion_BoolAndU32 {
 
 export interface SimpleUnion_StructVariant {
   id: string;
-  tuple: Tuple;
+  tuple: MyTuple;
 }
 
 export module SimpleUnion {
@@ -46,18 +48,16 @@ export module SimpleUnion {
 
 export interface JustAStruct {
   u8: number;
-  myTuple: Tuple;
+  myTuple: MyTuple;
 }
 
-export enum MyEnum {
-  One = 'One',
-  Two = 'Two',
-  Three = 'Three'
+export interface MyTuple {
+  0: (boolean) | undefined;
+  1: Array<string>;
+  length: 2;
 }
 
-export type NewTypeU32 = number & { type: 'NewTypeU32' };
-
-export const NewTypeU32 = (val: number): number & { type: 'NewTypeU32' } =>
-  val as any;
-
-export type AliasToStr = string;
+export const MyTuple = (
+  p0: (boolean) | undefined,
+  p1: Array<string>
+): MyTuple => [p0, p1];

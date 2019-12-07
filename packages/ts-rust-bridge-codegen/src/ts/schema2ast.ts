@@ -2,13 +2,16 @@ import {
   StructMembers,
   Scalar,
   Type,
-  EntryType,
+  SchemaElement,
   TypeTag,
   Variant,
-  getVariantName
+  getVariantName,
+  matchSchemaElement,
+  LookupName,
+  createLookupName
 } from '../schema';
 
-import { TsFileBlock, TsFileBlock as ts, D } from './ast';
+import { TsFileBlock, TsFileBlock as ts, Code } from './ast';
 
 export type Module = {
   type: 'ts-file-module';
@@ -25,32 +28,42 @@ const Module = (name: string, blocks: TsFileBlock[]): Module => ({
 export const isModule = (block: Module | TsFileBlock): block is Module =>
   (block as Module).type === 'ts-file-module';
 
-const entryToBlocks = EntryType.match({
-  Alias: (name, type): (TsFileBlock | Module)[] => [aliasToAlias(name, type)],
-  Struct: (name, members) => [structToInterface(name, members)],
-  Enum: (name, { variants }) => [enumToStringEnum(name, variants)],
-  Union: (name, variants) => [
-    unionToTaggedUnion(name, variants),
-    ...unionToPayloadInterfaces(name, variants),
-    Module(name, unionToConstructors(name, variants))
-  ],
-  Tuple: (name, fields) => [
-    tupleToInterface(name, fields),
-    tupleToConstructor(name, fields)
-  ],
-  Newtype: (name, type) => [
-    newtypeToTypeAlias(name, type),
-    newtypeToConstructor(name, type)
-  ]
-});
+const entryToBlocks = (
+  name: string,
+  entry: SchemaElement,
+  lookup: LookupName
+): (TsFileBlock | Module)[] =>
+  matchSchemaElement(entry, {
+    Alias: type => [aliasToAlias(name, type, lookup)],
+    Struct: members => [structToInterface(name, members, lookup)],
+    Enum: ({ variants }) => [enumToStringEnum(name, variants)],
+    Union: variants => [
+      unionToTaggedUnion(name, variants, lookup),
+      ...unionToPayloadInterfaces(name, variants, lookup),
+      Module(name, unionToConstructors(name, variants, lookup))
+    ],
+    Tuple: fields => [
+      tupleToInterface(name, fields, lookup),
+      tupleToConstructor(name, fields, lookup)
+    ],
+    Newtype: type => [
+      newtypeToTypeAlias(name, type, lookup),
+      newtypeToConstructor(name, type, lookup)
+    ]
+  });
 
-export const schema2ast = (entries: EntryType[]) =>
-  entries.reduce((blocks, entry) => blocks.concat(entryToBlocks(entry)), [] as (
-    | TsFileBlock
-    | Module)[]);
+export const schema2ast = (entries: { [name: string]: SchemaElement }) =>
+  Object.entries(entries).reduce(
+    (blocks, [name, entry]) =>
+      blocks.concat(entryToBlocks(name, entry, createLookupName(entries))),
+    [] as (TsFileBlock | Module)[]
+  );
 
-const aliasToAlias = (name: string, type: Type): TsFileBlock =>
-  ts.Alias({ name, toType: typeToString(type) });
+const aliasToAlias = (
+  name: string,
+  type: Type,
+  lookup: LookupName
+): TsFileBlock => ts.Alias({ name, toType: typeToString(type, lookup) });
 
 const enumToStringEnum = (name: string, variants: string[]): TsFileBlock =>
   ts.StringEnum({
@@ -58,39 +71,52 @@ const enumToStringEnum = (name: string, variants: string[]): TsFileBlock =>
     variants: variants.map((v): [string, string] => [v, v])
   });
 
-const unionToTaggedUnion = (name: string, variants: Variant[]): TsFileBlock =>
+const unionToTaggedUnion = (
+  name: string,
+  variants: Variant[],
+  lookup: LookupName
+): TsFileBlock =>
   ts.Union({
     name,
     tagField: 'tag',
     valueField: 'value',
     variants: variants.map(v => ({
       tag: getVariantName(v),
-      valueType: variantPayloadType(name, v)
+      valueType: variantPayloadType(name, v, lookup)
     }))
   });
 
-const newtypeToTypeAlias = (name: string, type: Type): TsFileBlock =>
+const newtypeToTypeAlias = (
+  name: string,
+  type: Type,
+  lookup: LookupName
+): TsFileBlock =>
   ts.Alias({
     name,
-    toType: newtypeToTypeStr(type, name)
+    toType: newtypeToTypeStr(type, name, lookup)
   });
 
-const newtypeToConstructor = (name: string, type: Type): TsFileBlock =>
+const newtypeToConstructor = (
+  name: string,
+  type: Type,
+  lookup: LookupName
+): TsFileBlock =>
   ts.ArrowFunc({
     name,
     params: [
       {
         name: 'val',
-        type: typeToString(type)
+        type: typeToString(type, lookup)
       }
     ],
     body: `(val as any)`,
-    returnType: newtypeToTypeStr(type, name)
+    returnType: newtypeToTypeStr(type, name, lookup)
   });
 
 const unionToPayloadInterfaces = (
   unionName: string,
-  variants: Variant[]
+  variants: Variant[],
+  lookup: LookupName
 ): TsFileBlock[] =>
   variants.reduce(
     (interfaces, v) =>
@@ -99,14 +125,16 @@ const unionToPayloadInterfaces = (
           interfaces.concat(
             structToInterface(
               variantPayloadTypeName(unionName, structName),
-              members
+              members,
+              lookup
             )
           ),
         Tuple: (tupleName, types) =>
           interfaces.concat(
             tupleToInterface(
               variantPayloadTypeName(unionName, tupleName),
-              types
+              types,
+              lookup
             )
           ),
         default: () => interfaces
@@ -116,10 +144,11 @@ const unionToPayloadInterfaces = (
 
 const unionToConstructors = (
   unionName: string,
-  variants: Variant[]
+  variants: Variant[],
+  lookup: LookupName
 ): TsFileBlock[] =>
   variants.map(v => {
-    const params = variantToCtorParameters(unionName, v);
+    const params = variantToCtorParameters(unionName, v, lookup);
     const name = getVariantName(v);
     return params.length > 0
       ? ts.ArrowFunc({
@@ -135,15 +164,19 @@ const unionToConstructors = (
         });
   });
 
-const variantToCtorParameters = (unionName: string, v: Variant): D.Field[] =>
+const variantToCtorParameters = (
+  unionName: string,
+  v: Variant,
+  lookup: LookupName
+): Code.Field[] =>
   Variant.match(v, {
     Struct: name => [
       { name: 'value', type: variantPayloadTypeName(unionName, name) }
     ],
     Unit: () => [],
-    NewType: (_, type) => [{ name: 'value', type: typeToString(type) }],
+    NewType: (_, type) => [{ name: 'value', type: typeToString(type, lookup) }],
     Tuple: (_, fields) =>
-      fields.map((f, i) => ({ name: `p${i}`, type: typeToString(f) }))
+      fields.map((f, i) => ({ name: `p${i}`, type: typeToString(f, lookup) }))
   });
 
 const variantToCtorBody = Variant.match({
@@ -156,44 +189,60 @@ const variantToCtorBody = Variant.match({
 
 const variantPayloadType = (
   unionName: string,
-  v: Variant
+  v: Variant,
+  lookup: LookupName
 ): string | undefined =>
   Variant.match(v, {
     Struct: name => variantPayloadTypeName(unionName, name),
     Tuple: name => variantPayloadTypeName(unionName, name),
     Unit: () => undefined,
-    NewType: (_, type) => typeToString(type)
+    NewType: (_, type) => typeToString(type, lookup)
     // Tuple: (_, fields) => `[${fields.map(typeToString).join(', ')}]`
   });
 
-const structToInterface = (name: string, members: StructMembers): TsFileBlock =>
+const structToInterface = (
+  name: string,
+  members: StructMembers,
+  lookup: LookupName
+): TsFileBlock =>
   ts.Interface({
     name,
     fields: Object.keys(members).map(
-      (name): D.Field => ({ name, type: typeToString(members[name]) })
+      (name): Code.Field => ({
+        name,
+        type: typeToString(members[name], lookup)
+      })
     )
   });
 
-const tupleToInterface = (name: string, fields: Type[]): TsFileBlock =>
+const tupleToInterface = (
+  name: string,
+  fields: Type[],
+  lookup: LookupName
+): TsFileBlock =>
   ts.Interface({
     name,
     fields: fields
       .map(
-        (field, i): D.Field => ({
+        (field, i): Code.Field => ({
           name: i.toString(),
-          type: typeToString(field)
+          type: typeToString(field, lookup)
         })
       )
       .concat({ name: 'length', type: fields.length.toString() })
   });
 
-const tupleToConstructor = (name: string, fields: Type[]): TsFileBlock =>
+const tupleToConstructor = (
+  name: string,
+  fields: Type[],
+  lookup: LookupName
+): TsFileBlock =>
   ts.ArrowFunc({
     name,
     params: fields.map(
-      (f, i): D.Field => ({
+      (f, i): Code.Field => ({
         name: 'p' + i.toString(),
-        type: typeToString(f)
+        type: typeToString(f, lookup)
       })
     ),
     body: `[${fields.map((_, i) => 'p' + i.toString()).join(', ')}]`,
@@ -217,21 +266,23 @@ const scalarToTypeString = (scalar: Scalar): string => {
   }
 };
 
-export const typeToString = (type: Type): string => {
+export const typeToString = (type: Type, lookup: LookupName): string => {
   switch (type.tag) {
     case TypeTag.Option:
-      return `(${typeToString(type.value)}) | undefined`;
+      return `(${typeToString(type.value, lookup)}) | undefined`;
     case TypeTag.Scalar:
       return scalarToTypeString(type.value);
     case TypeTag.Vec:
-      return `Array<${typeToString(type.value)}>`;
-    case TypeTag.RefTo:
-      return type.value;
+      return `Array<${typeToString(type.value, lookup)}>`;
   }
+  return lookup(type);
 };
 
-const newtypeToTypeStr = (type: Type, name: string): string =>
-  `${typeToString(type)} & { type: '${name}'}`;
+const newtypeToTypeStr = (
+  type: Type,
+  name: string,
+  lookup: LookupName
+): string => `${typeToString(type, lookup)} & { type: '${name}'}`;
 
 export const variantPayloadTypeName = (
   unionName: string,

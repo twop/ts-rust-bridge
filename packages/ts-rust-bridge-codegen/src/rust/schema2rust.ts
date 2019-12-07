@@ -3,27 +3,34 @@ import {
   StructMembers,
   Scalar,
   Type,
-  EntryType,
+  SchemaElement,
   TypeTag,
   Variant,
   FileBlock,
-  UnionOptions
+  UnionOptions,
+  LookupName,
+  createLookupName,
+  matchSchemaElement
 } from '../schema';
 
-export const schema2rust = (entries: EntryType[]): FileBlock[] =>
-  entries.map(
-    EntryType.match({
-      Alias: aliasToAlias,
-      Enum: enumToEnum,
-      Newtype: newtypeToStruct,
-      Tuple: tupleToStruct,
-      Struct: structToStruct,
-      Union: unionToEnum
+export const schema2rust = (entries: {
+  [name: string]: SchemaElement;
+}): FileBlock[] => {
+  const lookup = createLookupName(entries);
+  return Object.entries(entries).map(([name, entry]) =>
+    matchSchemaElement(entry, {
+      Alias: t => aliasToAlias(name, t, lookup),
+      Enum: variants => enumToEnum(name, variants),
+      Newtype: t => newtypeToStruct(name, t, lookup),
+      Tuple: fields => tupleToStruct(name, fields, lookup),
+      Struct: members => structToStruct(name, members, lookup),
+      Union: (variants, options) => unionToEnum(name, variants, options, lookup)
     })
   );
+};
 
-const aliasToAlias = (name: string, type: Type) => `
-pub type ${name} = ${typeToString(type)};
+const aliasToAlias = (name: string, type: Type, lookup: LookupName) => `
+pub type ${name} = ${typeToString(type, lookup)};
 `;
 
 const enumToEnum = (name: string, { variants }: EnumVariants): string => `
@@ -33,22 +40,36 @@ ${variants.map(v => `    ${v},`).join('\n')}
 }
 `;
 
-const newtypeToStruct = (name: string, type: Type): string => `
+const newtypeToStruct = (
+  name: string,
+  type: Type,
+  lookup: LookupName
+): string => `
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ${name}(pub ${typeToString(type)});
+pub struct ${name}(pub ${typeToString(type, lookup)});
 `;
 
-const tupleToStruct = (name: string, fields: Type[]): string => `
+const tupleToStruct = (
+  name: string,
+  fields: Type[],
+  lookup: LookupName
+): string => `
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct ${name}(${fields.map(t => `pub ${typeToString(t)}`).join(', ')});
+pub struct ${name}(${fields
+  .map(t => `pub ${typeToString(t, lookup)}`)
+  .join(', ')});
 `;
-const structToStruct = (name: string, members: StructMembers): string => `
+const structToStruct = (
+  name: string,
+  members: StructMembers,
+  lookup: LookupName
+): string => `
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ${name} {
 ${Object.keys(members)
   .map(n => {
     const snakeName = camelToSnakeCase(n);
-    const field = `pub ${snakeName}: ${typeToString(members[n])}`;
+    const field = `pub ${snakeName}: ${typeToString(members[n], lookup)}`;
     return snakeName === n
       ? `    ${field},`
       : `    #[serde(rename = "${n}")]\n    ${field},\n`;
@@ -60,31 +81,34 @@ ${Object.keys(members)
 const unionToEnum = (
   name: string,
   variants: Variant[],
-  { tagAnnotation }: UnionOptions
+  { tagAnnotation }: UnionOptions,
+  lookup: LookupName
 ): string => `
 #[derive(Deserialize, Serialize, Debug, Clone)]${
   tagAnnotation ? '\n#[serde(tag = "tag", content = "value")]' : ''
 }
 pub enum ${name} {
-${variants.map(v => `    ${variantStr(v)},`).join('\n')}
+${variants.map(v => `    ${variantStr(v, lookup)},`).join('\n')}
 }
 `;
 
-const variantStr = Variant.match({
-  Unit: name => name,
-  NewType: (name, type) => `${name}(${typeToString(type)})`,
-  Tuple: (name, fields) => `${name}(${fields.map(typeToString).join(', ')})`,
-  Struct: (name, members) =>
-    `${name} { ${Object.keys(members)
-      .map(n => {
-        const snakeName = camelToSnakeCase(n);
+const variantStr = (v: Variant, lookup: LookupName) =>
+  Variant.match(v, {
+    Unit: name => name,
+    NewType: (name, type) => `${name}(${typeToString(type, lookup)})`,
+    Tuple: (name, fields) =>
+      `${name}(${fields.map(f => typeToString(f, lookup)).join(', ')})`,
+    Struct: (name, members) =>
+      `${name} { ${Object.keys(members)
+        .map(n => {
+          const snakeName = camelToSnakeCase(n);
 
-        return `${
-          snakeName === n ? '' : `#[serde(rename = "${n}")] `
-        }${camelToSnakeCase(n)}: ${typeToString(members[n])}`;
-      })
-      .join(', ')} }`
-});
+          return `${
+            snakeName === n ? '' : `#[serde(rename = "${n}")] `
+          }${camelToSnakeCase(n)}: ${typeToString(members[n], lookup)}`;
+        })
+        .join(', ')} }`
+  });
 
 const scalarToString = (scalar: Scalar): string => {
   switch (scalar) {
@@ -93,7 +117,7 @@ const scalarToString = (scalar: Scalar): string => {
     case Scalar.F32:
       return 'f32';
     case Scalar.F64:
-      return 'f54';
+      return 'f64';
     case Scalar.U8:
       return 'u8';
     case Scalar.U16:
@@ -109,17 +133,17 @@ const scalarToString = (scalar: Scalar): string => {
   }
 };
 
-const typeToString = (type: Type): string => {
+const typeToString = (type: Type, lookup: LookupName): string => {
   switch (type.tag) {
     case TypeTag.Option:
-      return `Option<${typeToString(type.value)}>`;
+      return `Option<${typeToString(type.value, lookup)}>`;
     case TypeTag.Scalar:
       return scalarToString(type.value);
     case TypeTag.Vec:
-      return `Vec<${typeToString(type.value)}>`;
-    case TypeTag.RefTo:
-      return type.value;
+      return `Vec<${typeToString(type.value, lookup)}>`;
   }
+
+  return lookup(type);
 };
 
 const camelToSnakeCase = (str: string) =>

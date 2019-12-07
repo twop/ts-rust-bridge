@@ -1,8 +1,11 @@
 import {
   writeMessage,
-  writeEnum,
-  writeNormalStruct
-} from './generated/basic.ser.generated';
+  writeMyEnum,
+  writeNormalStruct,
+  readMessage,
+  readMyEnum,
+  readNormalStruct
+} from './generated/simple_serde.g';
 import {
   Sink,
   Serializer,
@@ -10,31 +13,18 @@ import {
   Deserializer
 } from '../../ts-binary/src/index';
 
-import {
-  NormalStruct,
-  Message,
-  Enum,
-  Tuple
-} from './generated/basic.generated';
-import {
-  readMessage,
-  readEnum,
-  readNormalStruct
-} from './generated/basic.deser.generated';
+import { NormalStruct, Message, MyEnum, MyTuple } from './generated/simple.g';
 
-let sink: Sink = {
-  arr: new Uint8Array(1), // for testing purposes,
-  pos: 0
-};
+let sink = Sink(new ArrayBuffer(100));
 
 const writeAThing = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
   sink.pos = 0;
   sink = ser(sink, thing);
-  return sink.arr.slice(0, sink.pos);
+  return new Uint8Array(sink.view.buffer).slice(0, sink.pos);
 };
 
-const readAThing = <T>(arr: Uint8Array, deser: Deserializer<T>): T =>
-  deser({ pos: 0, arr });
+const readAThing = <T>(arr: ArrayBuffer, deser: Deserializer<T>): T =>
+  deser(Sink(arr));
 
 const str = 'AnotherUnit';
 console.log('tag', JSON.stringify(str), writeAThing(str, write_str));
@@ -50,7 +40,7 @@ const msg = Message.VStruct({ id: 'some id', data: 'some data' });
 // const msg = Message.AnotherUnit;
 
 const bytes = writeAThing(msg, writeMessage);
-const restoredMessage = readAThing(bytes, readMessage);
+const restoredMessage = readAThing(bytes.buffer, readMessage);
 
 console.log(
   `are equals = ${JSON.stringify(msg) ===
@@ -58,14 +48,14 @@ console.log(
   JSON.stringify(msg)
 );
 
-const en = Enum.ONE;
-console.log('enum', JSON.stringify(en), writeAThing(en, writeEnum));
-console.log('D: enum', readAThing(sink.arr, readEnum));
+const en = MyEnum.ONE;
+console.log('enum', JSON.stringify(en), writeAThing(en, writeMyEnum));
+console.log('D: enum', readAThing(sink.view.buffer, readMyEnum));
 
-const struct: NormalStruct = { a: 13, tuple: Tuple(true, ['ab', 'c']) };
+const struct: NormalStruct = { a: 13, tuple: MyTuple(true, ['ab', 'c']) };
 console.log(
   'struct',
   JSON.stringify(struct),
   writeAThing(struct, writeNormalStruct)
 );
-console.log('D: struct', readAThing(sink.arr, readNormalStruct));
+console.log('D: struct', readAThing(sink.view.buffer, readNormalStruct));
