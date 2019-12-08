@@ -31,7 +31,7 @@
     ]
   },
   "scripts": {
-    "build": "pack build",
+    "build": "pika build",
     "gen:example-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/gen_simple.schema.ts",
     "gen:docs-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/for_docs/gen_docs_example.ts",
     "run:docs-code": "ts-node -O \"{\\\"module\\\": \\\"CommonJS\\\"}\" examples/for_docs/usage.ts",
