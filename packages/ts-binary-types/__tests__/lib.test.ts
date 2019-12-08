@@ -17,15 +17,9 @@ const saveAndRestore = <T>(
   //   deser: Deserializer<T>,
   //   ser: Serializer<T>
 ): T => {
-  const { arr }: Sink = bintype[bindesc].write(
-    {
-      arr: new Uint8Array(1), // small on purpose
-      pos: 0
-    },
-    val
-  );
-
-  return bintype[bindesc].read({ arr, pos: 0 });
+  const sink = bintype[bindesc].write(Sink(new ArrayBuffer(1)), val);
+  sink.pos = 0;
+  return bintype[bindesc].read(sink);
 };
 
 describe("numbers", () => {

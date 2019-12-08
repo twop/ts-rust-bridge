@@ -41,7 +41,7 @@ const bench = () => {
     log(`${name}: ${result.toFixed(2)} ms`);
   };
 
-  const COUNT = 50000;
+  const COUNT = 10000;
 
   function randStr(length: number): string {
     var text = "";
@@ -117,20 +117,17 @@ const bench = () => {
   log("----Complex(END)----");
   containers;
 
-  let sink: Sink = {
-    arr: new Uint8Array(1000),
-    pos: 0
-  };
+  let sink: Sink = Sink(new ArrayBuffer(1000));
 
   // const writeAThingToNothing = <T>(thing: T, ser: Serializer<T>): void => {
   //   sink.pos = 0;
   //   sink = ser(sink, thing);
   // };
 
-  const writeAThingToSlice = <T>(thing: T, ser: Serializer<T>): Uint8Array => {
+  const writeAThingToSlice = <T>(thing: T, ser: Serializer<T>): ArrayBuffer => {
     sink.pos = 0;
     sink = ser(sink, thing);
-    return sink.arr.slice(0, sink.pos);
+    return new Uint8Array(sink.view.buffer).slice(0, sink.pos).buffer;
   };
 
   function runbench<T>(
@@ -163,7 +160,7 @@ const bench = () => {
 
     log("----Deserialization----");
     measure("D: bincode", () => {
-      buffers.forEach((b, i) => (res[i] = deserializer({ arr: b, pos: 0 })));
+      buffers.forEach((b, i) => (res[i] = deserializer(Sink(b))));
     });
 
     // res.forEach((d, i) => {

@@ -6,9 +6,10 @@
     "version": "lerna exec npm version",
     "build": "lerna run build",
     "publish": "lerna publish from-package --contents pkg",
+    "bootstrap": "lerna bootstrap",
     "nuke": "lerna exec \"rm -f package-lock.json npm-shrinkwrap.json\" && lerna clean --yes && lerna bootstrap && lerna exec --stream -- \"test -f package-lock.json || npm install --package-lock-only\""
   },
   "devDependencies": {
-    "lerna": "^3.14.1"
+    "lerna": "^3.19.0"
   }
 }

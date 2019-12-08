@@ -25,19 +25,13 @@ If you want to use binary serialization/deserialization:
 Define AST(ish) structure in typescript. Note that it is a small subset of `serde` types from rust ecosystem.
 
 ```ts
-import { EntryType, T, Variant as V } from "ts-rust-bridge-codegen";
+import { Type } from "ts-rust-bridge-codegen";
 
-const Message = EntryType.Union(
-  "Message",
-  [
-    V.Unit("Unit"),
-    V.NewType("One", T.Scalar.F32),
-    V.Tuple("Two", [T.Option(T.Scalar.Bool), T.Scalar.F32]),
-    V.Struct("VStruct", { id: T.Scalar.Str, data: T.Scalar.Str })
-  ],
-  // needed to switch between json or binary format
-  { tagAnnotation: false }
-);
+const { Enum, Struct, Str, F32 } = Type;
+
+const Size = Enum("S", "M", "L");
+const Shirt = Struct({ size: Size, color: Str, price: F32 });
+const schema = { Size, Shirt };
 ```
 
 Then codegen typescript and rust:
@@ -45,8 +39,13 @@ Then codegen typescript and rust:
 ```ts
 import { schema2rust, schema2ts } from "ts-rust-bridge-codegen";
 
-const tsCode = schema2ts([Message]).join("\n\n");
-const rustCode = schema2rust([Message]).join("\n\n");
+const tsCode = schema2ts(schema).join("\n\n");
+
+const rustCode = `
+use serde::{Deserialize, Serialize};
+
+${schema2rust(schema).join("\n")}
+`;
 ```
 
 And here is the result:
@@ -54,49 +53,38 @@ And here is the result:
 rust
 
 ```rust
-#[derive(Deserialize, Debug, Clone)]
-pub enum Message {
-    Unit,
-    One(f32),
-    Two(Option<bool>, f32),
-    VStruct { id: String, data: String },
+// schema.rs
+use serde::{Deserialize, Serialize};
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Shirt {
+    pub size: Size,
+    pub color: String,
+    pub price: f32,
+}
+
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub enum Size {
+    S,
+    M,
+    L,
 }
 ```
 
 typescript
 
 ```ts
-export type Message =
-  | { tag: "Unit" }
-  | { tag: "One"; value: number }
-  | { tag: "Two"; value: Message_Two }
-  | { tag: "VStruct"; value: Message_VStruct };
-
-export interface Message_Two {
-  0: (boolean) | undefined;
-  1: number;
-  length: 2;
+// schema.ts after prettier
+export interface Shirt {
+  size: Size;
+  color: string;
+  price: number;
 }
 
-export interface Message_VStruct {
-  id: string;
-  data: string;
-}
-
-export module Message {
-  export const Unit: Message = { tag: "Unit" };
-
-  export const One = (value: number): Message => ({ tag: "One", value });
-
-  export const Two = (p0: (boolean) | undefined, p1: number): Message => ({
-    tag: "Two",
-    value: [p0, p1]
-  });
-
-  export const VStruct = (value: Message_VStruct): Message => ({
-    tag: "VStruct",
-    value
-  });
+export enum Size {
+  S = "S",
+  M = "M",
+  L = "L"
 }
 ```
 

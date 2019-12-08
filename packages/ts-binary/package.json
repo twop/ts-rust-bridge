@@ -48,5 +48,8 @@
     "ts-jest": "^24.0.2",
     "esm": "3.2.17",
     "typescript": "3.5.1"
-  }
+  },
+  "types": "pkg/dist-types/index.d.ts",
+  "main": "pkg/dist-node/index.js",
+  "module": "pkg/dist-web/index.js"
 }

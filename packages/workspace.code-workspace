@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "ts-rust-bridge-codegen"
+		},
+		{
+			"path": "/Users/twop.sk/work/ts-rust-bridge"
 		}
 	],
 	"settings": {
