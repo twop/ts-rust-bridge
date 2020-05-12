@@ -1,5 +1,5 @@
 import { schema2rust, schema2ts, schema2serde } from '../src/index';
-import { exampleSchema } from './simple.schema';
+import { exampleSchema, MyEnum } from './simple.schema';
 import { format } from 'prettier';
 import * as fs from 'fs';
 
@@ -10,7 +10,10 @@ const testRustFile = __dirname + '/generated/simple.g.rs';
 const rustContent = `
 use serde::Deserialize;
 
-${schema2rust(exampleSchema).join('\n')}
+${schema2rust({
+  ...exampleSchema,
+  MyEnum: [MyEnum, { derive: ['Clone', 'Copy'] }]
+}).join('\n')}
 `;
 
 const tsSerDeContent = `

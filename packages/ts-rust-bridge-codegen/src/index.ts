@@ -8,7 +8,11 @@ import { TsFileBlock, Code } from './ts/ast';
 
 export * from './schema';
 
-export { schema2rust } from './rust/schema2rust';
+export {
+  schema2rust,
+  ElementWithRustSettings,
+  RustTypeOptions
+} from './rust/schema2rust';
 
 export { SerDeCodeGenInput };
 export const schema2ts = (schema: Schema): FileBlock[] =>

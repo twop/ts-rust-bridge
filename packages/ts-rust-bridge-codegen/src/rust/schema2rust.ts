@@ -13,28 +13,61 @@ import {
   matchSchemaElement
 } from '../schema';
 
-export const schema2rust = (entries: {
-  [name: string]: SchemaElement;
-}): FileBlock[] => {
-  const lookup = createLookupName(entries);
-  return Object.entries(entries).map(([name, entry]) =>
-    matchSchemaElement(entry, {
-      Alias: t => aliasToAlias(name, t, lookup),
-      Enum: variants => enumToEnum(name, variants),
-      Newtype: t => newtypeToStruct(name, t, lookup),
-      Tuple: fields => tupleToStruct(name, fields, lookup),
-      Struct: members => structToStruct(name, members, lookup),
-      Union: (variants, options) => unionToEnum(name, variants, options, lookup)
-    })
-  );
+export type RustTypeOptions = {
+  derive: [string, ...string[]];
 };
+
+const mapValues = <A, B>(
+  obj: { [name: string]: A },
+  f: (a: A) => B
+): { [name: string]: B } =>
+  Object.fromEntries(
+    Object.entries(obj).map(([key, val]): [string, B] => [key, f(val)])
+  );
+
+export type ElementWithRustSettings = [SchemaElement, RustTypeOptions];
+
+const hasOptions = (
+  elem: SchemaElement | ElementWithRustSettings
+): elem is ElementWithRustSettings => Array.isArray(elem);
+
+export const schema2rust = (entries: {
+  [name: string]: SchemaElement | ElementWithRustSettings;
+}): FileBlock[] => {
+  const lookup = createLookupName(
+    mapValues(entries, el => (hasOptions(el) ? el[0] : el))
+  );
+
+  return Object.entries(entries).map(([name, entry]) => {
+    const [el, opt] = hasOptions(entry) ? entry : [entry, undefined];
+
+    return matchSchemaElement(el, {
+      Alias: t => aliasToAlias(name, t, lookup),
+      Enum: variants => enumToEnum(name, variants, opt),
+      Newtype: t => newtypeToStruct(name, t, lookup, opt),
+      Tuple: fields => tupleToStruct(name, fields, lookup, opt),
+      Struct: members => structToStruct(name, members, lookup, opt),
+      Union: (variants, options) =>
+        unionToEnum(name, variants, options, lookup, opt)
+    });
+  });
+};
+
+const deriveBlock = (opt: RustTypeOptions | undefined): string =>
+  opt
+    ? `#[derive(Deserialize, Serialize, ${opt.derive.join(', ')})]`
+    : `#[derive(Deserialize, Serialize)]`;
 
 const aliasToAlias = (name: string, type: Type, lookup: LookupName) => `
 pub type ${name} = ${typeToString(type, lookup)};
 `;
 
-const enumToEnum = (name: string, { variants }: EnumVariants): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]
+const enumToEnum = (
+  name: string,
+  { variants }: EnumVariants,
+  opt: RustTypeOptions | undefined
+): string => `
+${deriveBlock(opt)}
 pub enum ${name} {
 ${variants.map(v => `    ${v},`).join('\n')}
 }
@@ -43,18 +76,20 @@ ${variants.map(v => `    ${v},`).join('\n')}
 const newtypeToStruct = (
   name: string,
   type: Type,
-  lookup: LookupName
+  lookup: LookupName,
+  opt: RustTypeOptions | undefined
 ): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]
+${deriveBlock(opt)}
 pub struct ${name}(pub ${typeToString(type, lookup)});
 `;
 
 const tupleToStruct = (
   name: string,
   fields: Type[],
-  lookup: LookupName
+  lookup: LookupName,
+  opt: RustTypeOptions | undefined
 ): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]
+${deriveBlock(opt)}
 pub struct ${name}(${fields
   .map(t => `pub ${typeToString(t, lookup)}`)
   .join(', ')});
@@ -62,9 +97,10 @@ pub struct ${name}(${fields
 const structToStruct = (
   name: string,
   members: StructMembers,
-  lookup: LookupName
+  lookup: LookupName,
+  opt: RustTypeOptions | undefined
 ): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]
+${deriveBlock(opt)}
 pub struct ${name} {
 ${Object.keys(members)
   .map(n => {
@@ -82,9 +118,10 @@ const unionToEnum = (
   name: string,
   variants: Variant[],
   { tagAnnotation }: UnionOptions,
-  lookup: LookupName
+  lookup: LookupName,
+  opt: RustTypeOptions | undefined
 ): string => `
-#[derive(Deserialize, Serialize, Debug, Clone)]${
+${deriveBlock(opt)}${
   tagAnnotation ? '\n#[serde(tag = "tag", content = "value")]' : ''
 }
 pub enum ${name} {

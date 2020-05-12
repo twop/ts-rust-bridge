@@ -16,7 +16,7 @@ const {
   U32
 } = Type;
 
-const MyEnum = Enum('ONE', 'TWO', 'THREE');
+export const MyEnum = Enum('ONE', 'TWO', 'THREE');
 
 const MyTuple = Tuple(Option(Bool), Vec(Str));
 
