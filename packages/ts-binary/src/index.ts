@@ -55,7 +55,16 @@ export const write_u16: Serializer<number> = (sink, val) => {
 
 function write_u64_unchecked(sink: Sink, val: number) {
   const { view, pos, littleEndian } = sink;
+  // Even though we only support writing 4 byte values from JS, it's important
+  // to write 8 bytes in case the buffer is not filled with 0. Otherwise, other
+  // languages that can support 64 bit values (e.g. rust) risk reading garbage
+  // in the other 4 bytes and getting an incorrect value.
+  //
+  // We could require that the Sink buffer be zeroed as part of the API, but
+  // that's easy to forget (and it might be less efficient - it may require the
+  // caller to zero out the entire buffer when that may be mostly unnecessary).
   view.setUint32(littleEndian ? pos : pos + 4, val, littleEndian);
+  view.setUint32(littleEndian ? pos + 4 : pos, 0, littleEndian);
   return (sink.pos += 8), sink;
 }
 
