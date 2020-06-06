@@ -17,31 +17,35 @@ export type RustTypeOptions = {
   derive: [string, ...string[]];
 };
 
-const mapValues = <A, B>(
-  obj: { [name: string]: A },
-  f: (a: A) => B
-): { [name: string]: B } =>
-  Object.fromEntries(
-    Object.entries(obj).map(([key, val]): [string, B] => [key, f(val)])
-  );
+// const mapValues = <A, B>(
+//   obj: { [name: string]: A },
+//   f: (a: A) => B
+// ): { [name: string]: B } =>
+//   Object.fromEntries(
+//     Object.entries(obj).map(([key, val]): [string, B] => [key, f(val)])
+//   );
 
-export type ElementWithRustSettings = [SchemaElement, RustTypeOptions];
+// export type ElementWithRustSettings = [SchemaElement, RustTypeOptions];
 
-const hasOptions = (
-  elem: SchemaElement | ElementWithRustSettings
-): elem is ElementWithRustSettings => Array.isArray(elem);
+// const hasOptions = (
+//   elem: SchemaElement | ElementWith
+// ): elem is ElementWithRustSettings => Array.isArray(elem);
 
-export const schema2rust = (entries: {
-  [name: string]: SchemaElement | ElementWithRustSettings;
-}): FileBlock[] => {
-  const lookup = createLookupName(
-    mapValues(entries, el => (hasOptions(el) ? el[0] : el))
-  );
+export type SchemaDelcarationObject = { [name: string]: SchemaElement };
+export type SchemaRustOptions<T extends SchemaDelcarationObject> = Partial<
+  { [K in keyof T]: RustTypeOptions }
+>;
+
+export const schema2rust = <T extends SchemaDelcarationObject>(
+  entries: T,
+  options?: SchemaRustOptions<T>
+): FileBlock[] => {
+  const lookup = createLookupName(entries);
 
   return Object.entries(entries).map(([name, entry]) => {
-    const [el, opt] = hasOptions(entry) ? entry : [entry, undefined];
+    const opt = options && options[name];
 
-    return matchSchemaElement(el, {
+    return matchSchemaElement(entry, {
       Alias: t => aliasToAlias(name, t, lookup),
       Enum: variants => enumToEnum(name, variants, opt),
       Newtype: t => newtypeToStruct(name, t, lookup, opt),

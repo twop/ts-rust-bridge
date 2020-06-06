@@ -10,7 +10,8 @@ export * from './schema';
 
 export {
   schema2rust,
-  ElementWithRustSettings,
+  SchemaDelcarationObject,
+  SchemaRustOptions,
   RustTypeOptions
 } from './rust/schema2rust';
 
