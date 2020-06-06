@@ -1,6 +1,6 @@
 {
   "name": "ts-binary-types",
-  "version": "0.8.0",
+  "version": "0.10.0",
   "description": "A collection of runtype types to serialize data structures in typescript to binary format (rust bincode compatible)",
   "license": "MIT",
   "type": "module",
