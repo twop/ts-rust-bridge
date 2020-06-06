@@ -47,14 +47,14 @@
     "@babel/preset-env": "^7.6.0",
     "@babel/preset-typescript": "^7.6.0",
     "@pika/pack": "^0.5.0",
-    "@pika/plugin-build-node": "^0.6.1",
-    "@pika/plugin-build-web": "^0.6.1",
-    "@pika/plugin-ts-standard-pkg": "^0.6.1",
+    "@pika/plugin-build-node": "^0.9.2",
+    "@pika/plugin-build-web": "^0.9.2",
+    "@pika/plugin-ts-standard-pkg": "^0.9.2",
     "@types/jest": "^24.0.13",
     "jest": "^24.8.0",
     "ts-jest": "^24.0.2",
     "esm": "3.2.17",
-    "typescript": "3.5.1",
+    "typescript": "3.9.5",
     "ts-node": "^8.4.1"
   }
 }
