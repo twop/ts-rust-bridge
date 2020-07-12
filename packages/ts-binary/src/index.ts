@@ -11,7 +11,7 @@ export const Sink = (
 ): Sink => ({
   pos,
   littleEndian,
-  view: new DataView(arr)
+  view: new DataView(arr),
 });
 
 export type Serializer<T> = (sink: Sink, val: T) => Sink;
@@ -20,7 +20,7 @@ export type Deserializer<T> = (sink: Sink) => T;
 const reserve = (sink: Sink, numberOfBytes: number): Sink => {
   const {
     view: { buffer },
-    pos
+    pos,
   } = sink;
 
   const curLen = buffer.byteLength;
@@ -128,24 +128,29 @@ export const opt_writer = <T>(
 ): Serializer<T | undefined> => (sink: Sink, val: T | undefined) =>
   val === undefined ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val);
 
+export const nullable_writer = <T>(
+  serEl: Serializer<T>
+): Serializer<T | null> => (sink: Sink, val: T | null) =>
+  val === null ? write_u8(sink, 0) : serEl(write_u8(sink, 1), val);
+
 // -------- Deserialization ----------
 
-export const read_u8: Deserializer<number> = sink => {
+export const read_u8: Deserializer<number> = (sink) => {
   const { pos, view } = sink;
   return (sink.pos += 1), view.getUint8(pos);
 };
 
-export const read_u16: Deserializer<number> = sink => {
+export const read_u16: Deserializer<number> = (sink) => {
   const { pos, view, littleEndian } = sink;
   return (sink.pos += 2), view.getUint16(pos, littleEndian);
 };
 
-export const read_u32: Deserializer<number> = sink => {
+export const read_u32: Deserializer<number> = (sink) => {
   const { pos, view, littleEndian } = sink;
   return (sink.pos += 4), view.getUint32(pos, littleEndian);
 };
 
-export const read_u64: Deserializer<number> = sink => {
+export const read_u64: Deserializer<number> = (sink) => {
   const { view, pos, littleEndian } = sink;
 
   // we don't support numbers more than u32 (yet)
@@ -154,31 +159,36 @@ export const read_u64: Deserializer<number> = sink => {
   );
 };
 
-export const read_f32: Deserializer<number> = sink => {
+export const read_f32: Deserializer<number> = (sink) => {
   const { pos, view, littleEndian } = sink;
   return (sink.pos += 4), view.getFloat32(pos, littleEndian);
 };
 
-export const read_f64: Deserializer<number> = sink => {
+export const read_f64: Deserializer<number> = (sink) => {
   const { pos, view, littleEndian } = sink;
   return (sink.pos += 8), view.getFloat64(pos, littleEndian);
 };
 
-export const read_i32: Deserializer<number> = sink => {
+export const read_i32: Deserializer<number> = (sink) => {
   const { pos, view, littleEndian } = sink;
   return (sink.pos += 4), view.getInt32(pos, littleEndian);
 };
 
-export const read_bool: Deserializer<boolean> = sink => read_u8(sink) === 1;
+export const read_bool: Deserializer<boolean> = (sink) => read_u8(sink) === 1;
 
 export const opt_reader = <T>(
   readEl: Deserializer<T>
-): Deserializer<T | undefined> => sink =>
+): Deserializer<T | undefined> => (sink) =>
   read_u8(sink) === 1 ? readEl(sink) : undefined;
 
-export const seq_reader = <T>(
+export const nullable_reader = <T>(
   readEl: Deserializer<T>
-): Deserializer<T[]> => sink => {
+): Deserializer<T | null> => (sink) =>
+  read_u8(sink) === 1 ? readEl(sink) : null;
+
+export const seq_reader = <T>(readEl: Deserializer<T>): Deserializer<T[]> => (
+  sink
+) => {
   const count = read_u64(sink);
 
   // Note it doesn't make sense to set capacity here
@@ -194,11 +204,11 @@ export const seq_reader = <T>(
 
 const decoder = new TextDecoder();
 
-export const read_str: Deserializer<string> = sink => {
+export const read_str: Deserializer<string> = (sink) => {
   const len = read_u64(sink);
   const {
     pos,
-    view: { buffer }
+    view: { buffer },
   } = sink;
   const str = decoder.decode(new Uint8Array(buffer, pos, len));
   return (sink.pos += len), str;

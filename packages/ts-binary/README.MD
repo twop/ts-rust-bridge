@@ -130,7 +130,16 @@ const opt_writer: <T>(serEl: Serializer<T>) => Serializer<T | undefined>;
 const opt_reader: <T>(readEl: Deserializer<T>) => Deserializer<T | undefined>;
 ```
 
-Caveat: `Option<Option<T>>` equals to just `Option<T>` in typescript, but in rust this is technically not true.
+### Nullable
+
+In case you need to deal with nulls, there is also a nullable version that is described as `T | null` (but not `undefined`). Encoded as 1 (one byte) followed up by a serialized value T if !== null or just 0 (one byte).
+
+```ts
+const nullable_writer: <T>(serEl: Serializer<T>) => Serializer<T | null>;
+const nullable_reader: <T>(readEl: Deserializer<T>) => Deserializer<T | null>;
+```
+
+Caveat: `Nullable<Nullable<T>>` equals to just `Nullable<T>` in typescript, but in rust this is technically not true.
 
 ## Simple benchmarks
 
