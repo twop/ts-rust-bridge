@@ -16,12 +16,14 @@ import {
   write_u8,
   opt_writer,
   opt_reader,
+  nullable_reader,
+  nullable_writer,
   read_f32,
   write_f32,
   write_i32,
   read_i32,
   write_f64,
-  read_f64
+  read_f64,
 } from '../src/index';
 
 const serializeAndRestore = <T>(
@@ -95,4 +97,18 @@ test('it reads and writes optional string', () => {
   expect(serializeAndRestore(undefined, writeOptString, readOptString)).toEqual(
     undefined
   );
+});
+
+test('it reads and writes nullable string', () => {
+  const writeNullableString = nullable_writer(write_str);
+  const readNullableString = nullable_reader(read_str);
+
+  const str = 'some str';
+  expect(
+    serializeAndRestore(str, writeNullableString, readNullableString)
+  ).toEqual(str);
+
+  expect(
+    serializeAndRestore(null, writeNullableString, readNullableString)
+  ).toEqual(null);
 });
