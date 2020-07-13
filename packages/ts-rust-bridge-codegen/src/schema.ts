@@ -111,7 +111,8 @@ export const Variant = Union({
 export enum TypeTag {
   Scalar = 'Scalar',
   Vec = 'Vec',
-  Option = 'Option'
+  Option = 'Option',
+  Nullable = 'Nullable'
   // RefTo = 'RefTo'
 }
 
@@ -131,12 +132,18 @@ export type Type =
   | { tag: TypeTag.Scalar; value: Scalar }
   | { tag: TypeTag.Vec; value: Type }
   | { tag: TypeTag.Option; value: Type }
+  | { tag: TypeTag.Nullable; value: Type }
   | SchemaElement;
 
 const isTypeDefinition = (val: unknown): val is Type => {
   if (isSchemaElement(val)) return true;
 
-  const possibleTypeTags = [TypeTag.Scalar, TypeTag.Vec, TypeTag.Option];
+  const possibleTypeTags = [
+    TypeTag.Scalar,
+    TypeTag.Vec,
+    TypeTag.Option,
+    TypeTag.Nullable
+  ];
   if (typeof val === 'object' && val != null && 'tag' in val) {
     return possibleTypeTags.includes((val as any).tag);
   }
@@ -168,6 +175,7 @@ export const Type = {
   ...scalarsToType,
   Vec: (value: Type): Type => ({ tag: TypeTag.Vec, value }),
   Option: (value: Type): Type => ({ tag: TypeTag.Option, value }),
+  Nullable: (value: Type): Type => ({ tag: TypeTag.Nullable, value }),
   Alias: (val: Type): SchemaElement => ({ tag: 'Alias', val }),
   Struct: (val: StructMembers): SchemaElement => ({ tag: 'Struct', val }),
   Enum: (...variants: string[]): SchemaElement => ({

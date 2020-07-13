@@ -16,6 +16,7 @@ import {
   opt_writer,
   write_bool,
   write_u8,
+  nullable_writer,
   seq_writer,
   Sink,
   Serializer,
@@ -25,15 +26,20 @@ import {
   opt_reader,
   read_bool,
   read_u8,
+  nullable_reader,
   seq_reader,
   Deserializer
 } from '../../../ts-binary/src/index';
 
 // Serializers
 
-const writeOptVec: Serializer<(boolean) | undefined> = opt_writer(write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
-const writeVecVec: Serializer<Array<string>> = seq_writer(write_str);
+const writeNullableBool: Serializer<(boolean) | null> = nullable_writer(
+  write_bool
+);
+
+const writeVecStr: Serializer<Array<string>> = seq_writer(write_str);
 
 const MyEnumMap: { [key: string]: number } = { One: 0, Two: 1, Three: 2 };
 
@@ -45,12 +51,12 @@ export const writeNewTypeU32: Serializer<NewTypeU32> = write_u32;
 export const writeAliasToStr: Serializer<AliasToStr> = write_str;
 
 export const writeMyTuple = (sink: Sink, val: MyTuple): Sink =>
-  writeVecVec(writeOptVec(sink, val[0]), val[1]);
+  writeVecStr(writeNullableBool(sink, val[0]), val[1]);
 
 const writeSimpleUnion_BoolAndU32 = (
   sink: Sink,
   val: SimpleUnion_BoolAndU32
-): Sink => write_u32(writeOptVec(sink, val[0]), val[1]);
+): Sink => write_u32(writeOptBool(sink, val[0]), val[1]);
 
 const writeSimpleUnion_StructVariant = (
   sink: Sink,
@@ -77,9 +83,13 @@ export const writeJustAStruct = (
 
 // Deserializers
 
-const readOptVec: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
-const readVecVec: Deserializer<Array<string>> = seq_reader(read_str);
+const readNullableBool: Deserializer<(boolean) | null> = nullable_reader(
+  read_bool
+);
+
+const readVecStr: Deserializer<Array<string>> = seq_reader(read_str);
 
 const MyEnumReverseMap: MyEnum[] = [MyEnum.One, MyEnum.Two, MyEnum.Three];
 
@@ -92,7 +102,7 @@ export const readNewTypeU32 = (sink: Sink): NewTypeU32 =>
 export const readAliasToStr: Deserializer<AliasToStr> = read_str;
 
 export const readMyTuple = (sink: Sink): MyTuple =>
-  MyTuple(readOptVec(sink), readVecVec(sink));
+  MyTuple(readNullableBool(sink), readVecStr(sink));
 
 export const readSimpleUnion = (sink: Sink): SimpleUnion => {
   switch (read_u32(sink)) {
@@ -101,7 +111,7 @@ export const readSimpleUnion = (sink: Sink): SimpleUnion => {
     case 1:
       return SimpleUnion.Float32(read_f32(sink));
     case 2:
-      return SimpleUnion.BoolAndU32(readOptVec(sink), read_u32(sink));
+      return SimpleUnion.BoolAndU32(readOptBool(sink), read_u32(sink));
     case 3:
       return SimpleUnion.StructVariant(readSimpleUnion_StructVariant(sink));
   }

@@ -1,6 +1,6 @@
 import { Sink, Deserializer, Serializer } from '../../ts-binary/src/index';
 
-import * as t from './generated/types';
+import * as t from './generated/types.g';
 import * as sd from './generated/types.serde.g';
 
 const serde = <T>(val: T, ser: Serializer<T>, deser: Deserializer<T>): T => {
@@ -20,6 +20,8 @@ test('it reads and writes Enum', () => {
 test('it reads and writes Tuple', () => {
   const val = t.MyTuple(false, ['a', 'b', 'ccs']);
   expect(serde(val, sd.writeMyTuple, sd.readMyTuple)).toEqual(val);
+  const val2 = t.MyTuple(null, ['a']);
+  expect(serde(val2, sd.writeMyTuple, sd.readMyTuple)).toEqual(val2);
 });
 
 test('it reads and writes NewType', () => {

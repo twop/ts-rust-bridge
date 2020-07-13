@@ -95,12 +95,12 @@ export enum MyEnum {
 }
 
 export interface MyTuple {
-  0: (boolean) | undefined;
+  0: (boolean) | null;
   1: Array<string>;
   length: 2;
 }
 
-export const MyTuple = (
-  p0: (boolean) | undefined,
-  p1: Array<string>
-): MyTuple => [p0, p1];
+export const MyTuple = (p0: (boolean) | null, p1: Array<string>): MyTuple => [
+  p0,
+  p1
+];

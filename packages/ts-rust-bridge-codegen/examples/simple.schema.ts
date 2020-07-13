@@ -11,6 +11,7 @@ const {
   Str,
   Bool,
   Option,
+  Nullable,
   F32,
   U8,
   U32
@@ -18,7 +19,7 @@ const {
 
 export const MyEnum = Enum('ONE', 'TWO', 'THREE');
 
-const MyTuple = Tuple(Option(Bool), Vec(Str));
+const MyTuple = Tuple(Nullable(Bool), Vec(Str));
 
 const NormalStruct = Struct({
   a: U8,

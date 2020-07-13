@@ -176,6 +176,7 @@ const scalarToString = (scalar: Scalar): string => {
 
 const typeToString = (type: Type, lookup: LookupName): string => {
   switch (type.tag) {
+    case TypeTag.Nullable:
     case TypeTag.Option:
       return `Option<${typeToString(type.value, lookup)}>`;
     case TypeTag.Scalar:

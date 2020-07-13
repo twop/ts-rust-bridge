@@ -21,6 +21,7 @@ import {
   write_str,
   seq_writer,
   write_u8,
+  nullable_writer,
   Sink,
   Serializer,
   read_u32,
@@ -30,12 +31,13 @@ import {
   read_str,
   seq_reader,
   read_u8,
+  nullable_reader,
   Deserializer
 } from '../../../ts-binary/src/index';
 
 // Serializers
 
-const writeOptVec: Serializer<(boolean) | undefined> = opt_writer(write_bool);
+const writeOptBool: Serializer<(boolean) | undefined> = opt_writer(write_bool);
 
 export const writeVec3 = (sink: Sink, val: Vec3): Sink =>
   write_f32(write_f32(write_f32(sink, val[0]), val[1]), val[2]);
@@ -52,10 +54,14 @@ export const writeFigure = (sink: Sink, { dots, colors }: Figure): Sink =>
 
 const writeVecFigure: Serializer<Array<Figure>> = seq_writer(writeFigure);
 
-const writeVecVec: Serializer<Array<string>> = seq_writer(write_str);
+const writeNullableBool: Serializer<(boolean) | null> = nullable_writer(
+  write_bool
+);
+
+const writeVecStr: Serializer<Array<string>> = seq_writer(write_str);
 
 const writeMessage_Two = (sink: Sink, val: Message_Two): Sink =>
-  write_u32(writeOptVec(sink, val[0]), val[1]);
+  write_u32(writeOptBool(sink, val[0]), val[1]);
 
 const writeMessage_VStruct = (
   sink: Sink,
@@ -91,7 +97,7 @@ export const writeContainer = (sink: Sink, val: Container): Sink => {
 export const writeNewtypeAlias: Serializer<NewtypeAlias> = writeNType;
 
 export const writeMyTuple = (sink: Sink, val: MyTuple): Sink =>
-  writeVecVec(writeOptVec(sink, val[0]), val[1]);
+  writeVecStr(writeNullableBool(sink, val[0]), val[1]);
 
 export const writeNormalStruct = (
   sink: Sink,
@@ -105,7 +111,7 @@ export const writeMyEnum = (sink: Sink, val: MyEnum): Sink =>
 
 // Deserializers
 
-const readOptVec: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
+const readOptBool: Deserializer<(boolean) | undefined> = opt_reader(read_bool);
 
 export const readVec3 = (sink: Sink): Vec3 =>
   Vec3(read_f32(sink), read_f32(sink), read_f32(sink));
@@ -125,7 +131,11 @@ export const readFigure = (sink: Sink): Figure => {
 
 const readVecFigure: Deserializer<Array<Figure>> = seq_reader(readFigure);
 
-const readVecVec: Deserializer<Array<string>> = seq_reader(read_str);
+const readNullableBool: Deserializer<(boolean) | null> = nullable_reader(
+  read_bool
+);
+
+const readVecStr: Deserializer<Array<string>> = seq_reader(read_str);
 
 export const readMessage = (sink: Sink): Message => {
   switch (read_u32(sink)) {
@@ -134,7 +144,7 @@ export const readMessage = (sink: Sink): Message => {
     case 1:
       return Message.One(read_f32(sink));
     case 2:
-      return Message.Two(readOptVec(sink), read_u32(sink));
+      return Message.Two(readOptBool(sink), read_u32(sink));
     case 3:
       return Message.VStruct(readMessage_VStruct(sink));
   }
@@ -164,7 +174,7 @@ export const readContainer = (sink: Sink): Container => {
 export const readNewtypeAlias: Deserializer<NewtypeAlias> = readNType;
 
 export const readMyTuple = (sink: Sink): MyTuple =>
-  MyTuple(readOptVec(sink), readVecVec(sink));
+  MyTuple(readNullableBool(sink), readVecStr(sink));
 
 export const readNormalStruct = (sink: Sink): NormalStruct => {
   const a = read_u8(sink);

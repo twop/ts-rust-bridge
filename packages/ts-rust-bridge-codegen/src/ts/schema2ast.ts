@@ -270,6 +270,8 @@ export const typeToString = (type: Type, lookup: LookupName): string => {
   switch (type.tag) {
     case TypeTag.Option:
       return `(${typeToString(type.value, lookup)}) | undefined`;
+    case TypeTag.Nullable:
+      return `(${typeToString(type.value, lookup)}) | null`;
     case TypeTag.Scalar:
       return scalarToTypeString(type.value);
     case TypeTag.Vec:

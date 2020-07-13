@@ -39,7 +39,8 @@ const WriteFuncs: ReadOrWrite = {
   [Scalar.USIZE]: 'write_u64',
   [Scalar.I32]: 'write_i32',
   Opt: 'opt_writer',
-  Seq: 'seq_writer'
+  Seq: 'seq_writer',
+  Nullable: 'nullable_writer'
 };
 
 const serializerType = (typeStr: string) =>
@@ -327,13 +328,18 @@ const generateTypesSerializers = (
       return descriptions;
 
     case TypeTag.Vec:
+    case TypeTag.Nullable:
     case TypeTag.Option:
       return generateTypesSerializers(type.value, lookup, [
         {
           typeChain: traverseType(type),
           toOrFrom: type,
           body: `${
-            type.tag === TypeTag.Option ? WriteFuncs.Opt : WriteFuncs.Seq
+            type.tag === TypeTag.Option
+              ? WriteFuncs.Opt
+              : type.tag === TypeTag.Nullable
+              ? WriteFuncs.Nullable
+              : WriteFuncs.Seq
           }(${serializerChainName(traverseType(type.value), lookup)})`
         },
         ...descriptions

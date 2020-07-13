@@ -13,6 +13,7 @@ const {
   Union,
   Newtype,
   Option,
+  Nullable,
   Vec,
   Str,
   U32,
@@ -24,7 +25,7 @@ const {
 const Size = Enum('S', 'M', 'L');
 const Shirt = Struct({ size: Size, color: Str, price: F32 });
 
-const MyTuple = Tuple(Option(Bool), Vec(Str));
+const MyTuple = Tuple(Nullable(Bool), Vec(Str));
 
 const JustAStruct = Struct({
   u8: U8,

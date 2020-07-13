@@ -30,8 +30,8 @@ export const traverseType = (type: Type, parts: Type[] = []): Type[] => {
       return parts.concat(type);
 
     case TypeTag.Vec:
-      return traverseType(type.value, parts.concat(type));
     case TypeTag.Option:
+    case TypeTag.Nullable:
       return traverseType(type.value, parts.concat(type));
   }
   return parts.concat(type);
@@ -40,10 +40,13 @@ export const traverseType = (type: Type, parts: Type[] = []): Type[] => {
 const nameOfTopLevelTypeOnly = (type: Type, lookup: LookupName): string => {
   switch (type.tag) {
     case TypeTag.Scalar:
+      return type.value;
     case TypeTag.Vec:
       return 'Vec';
     case TypeTag.Option:
       return 'Opt';
+    case TypeTag.Nullable:
+      return 'Nullable';
   }
   return lookup(type);
 };
@@ -51,6 +54,7 @@ const nameOfTopLevelTypeOnly = (type: Type, lookup: LookupName): string => {
 export type ReadOrWrite = { [K in Scalar]: string } & {
   Seq: string;
   Opt: string;
+  Nullable: string;
 };
 
 export const chainName = (
@@ -121,6 +125,11 @@ export const collectRequiredImports = (
         fromLibrary(readOrWrite.Opt),
         ...collectRequiredImports(type.value, readOrWrite, lookup)
       );
+    case TypeTag.Nullable:
+      return imports.concat(
+        fromLibrary(readOrWrite.Nullable),
+        ...collectRequiredImports(type.value, readOrWrite, lookup)
+      );
   }
   return imports.concat(fromTypesDeclaration(lookup(type)));
 };
@@ -163,7 +172,8 @@ const sortPiecesByDependencies = (
 
   const sorted = findOrder(allFuncNames, dependencyEdges);
 
-  console.log({ sorted });
+  // console.log({ sorted });
+  // console.log({ pieces });
 
   return sorted.map(i => pieces.find(p => p.id === i)!);
 };
@@ -243,9 +253,15 @@ export const schema2tsBlocks = ({
   // );
   // console.log(
   //   'piecesToSort',
-  //   piecesToSort.map(({ dependsOn, id }) => ({ id, dependsOn }))
+  //   codePiecesToSort.map(({ dependsOn, id }) => ({ id, dependsOn }))
   // );
-  // // console.log(JSON.stringify(piecesToSort));
+
+  // console.log(
+  //   'typeSerdesToSort',
+  //   typeSerdesToSort.map(({ dependsOn, id }) => ({ id, dependsOn }))
+  // );
+
+  // console.log(JSON.stringify(codePiecesToSort));
 
   return [
     ts.Import({ names: unique(decl, s => s), from: typesDeclarationFile }),

@@ -37,7 +37,8 @@ const ReadFuncs: ReadOrWrite = {
   [Scalar.U32]: 'read_u32',
   [Scalar.USIZE]: 'read_u64',
   Opt: 'opt_reader',
-  Seq: 'seq_reader'
+  Seq: 'seq_reader',
+  Nullable: 'nullable_reader'
 };
 
 const deserializerType = (typeStr: string) =>
@@ -299,6 +300,7 @@ const generateTypesDeserializers = (
       return typeDeserializers;
 
     case TypeTag.Vec:
+    case TypeTag.Nullable:
     case TypeTag.Option:
       return generateTypesDeserializers(
         type.value,
@@ -307,7 +309,11 @@ const generateTypesDeserializers = (
           typeChain: traverseType(type),
           toOrFrom: type,
           body: `${
-            type.tag === TypeTag.Option ? ReadFuncs.Opt : ReadFuncs.Seq
+            type.tag === TypeTag.Option
+              ? ReadFuncs.Opt
+              : type.tag === TypeTag.Nullable
+              ? ReadFuncs.Nullable
+              : ReadFuncs.Seq
           }(${deserializerChainName(traverseType(type.value), lookup)})`
         })
       );
