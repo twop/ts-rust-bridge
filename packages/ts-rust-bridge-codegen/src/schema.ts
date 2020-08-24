@@ -90,7 +90,7 @@ export const createLookupName = (schema: Schema): LookupName => {
     const name = mapping.get(element);
     if (name === undefined) {
       throw new Error(
-        'not found name for:]n' + JSON.stringify(element, undefined, 2)
+        'not found name for:\n' + JSON.stringify(element, undefined, 2)
       );
     }
 
